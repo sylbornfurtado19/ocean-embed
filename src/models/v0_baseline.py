@@ -1,7 +1,4 @@
-"""Baseline model architecture for OceanEmbed.
-
-TODO: implement a simple MLP/CNN model that maps surface inputs to 15 depth outputs.
-"""
+"""Baseline model architecture for OceanEmbed."""
 
 from __future__ import annotations
 
@@ -9,17 +6,21 @@ import torch
 from torch import nn
 
 
-class OceanEmbedBaseline(nn.Module):
-    """Simple baseline model mapping surface features to temperature at 15 depth levels."""
+class OceanBaselineV0(nn.Module):
+    """A lightweight MLP baseline that maps surface features to 15-depth temperature predictions."""
 
-    def __init__(self, input_dim: int, depth_levels: int = 15) -> None:
+    def __init__(self, input_dim: int, hidden_dim: int = 128, output_dim: int = 15, dropout: float = 0.1) -> None:
         super().__init__()
-        self.input_dim = input_dim
-        self.depth_levels = depth_levels
-        # TODO: define encoder/decoder architecture.
-        raise NotImplementedError("TODO: implement baseline architecture.")
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim // 2, output_dim),
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Return depth-wise temperature predictions for the given input batch."""
-        # TODO: implement forward pass.
-        raise NotImplementedError("TODO: implement forward pass.")
+        """Return a 15-depth temperature vector for each example in the batch."""
+        return self.net(x)
