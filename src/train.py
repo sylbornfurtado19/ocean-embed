@@ -9,15 +9,18 @@ import numpy as np
 import torch
 import yaml
 from torch import nn
+from torch.nn import functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
 from src.models.v0_baseline import OceanBaselineV0
+from src.models.v1_uncertainty import OceanBaselineV1
 
 
 def parse_args() -> argparse.Namespace:
-    """Parse the YAML config path for the training run."""
+    """Parse the YAML config path and model version."""
     parser = argparse.ArgumentParser(description="Train the OceanEmbed baseline model.")
     parser.add_argument("--config", type=str, default="configs/bay_of_bengal.yaml", help="Path to YAML config file.")
+    parser.add_argument("--model_version", type=str, choices=["v0", "v1_uncertainty"], default="v0", help="Model version to train.")
     return parser.parse_args()
 
 
@@ -48,8 +51,21 @@ def spatial_holdout_split(X: np.ndarray, y: np.ndarray, feature_names: list[str]
     return X[~val_mask], y[~val_mask], X[val_mask], y[val_mask]
 
 
-def train_model(config_path: str) -> None:
-    """Load config, build train/val splits, train the baseline model, and save the best checkpoint."""
+def gaussian_nll_loss(mean: torch.Tensor, log_var: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    """Compute Gaussian negative log-likelihood loss for mean/log-variance predictions."""
+    return F.gaussian_nll_loss(mean, target, torch.exp(log_var), full=False, reduction="mean")
+
+
+def get_model(model_version: str, input_dim: int, hidden_dim: int, output_dim: int, dropout: float) -> nn.Module:
+    if model_version == "v0":
+        return OceanBaselineV0(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim, dropout=dropout)
+    if model_version == "v1_uncertainty":
+        return OceanBaselineV1(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim, dropout=dropout)
+    raise ValueError(f"Unsupported model version: {model_version}")
+
+
+def train_model(config_path: str, model_version: str = "v0") -> None:
+    """Train either the v0 MSE baseline or the v1 uncertainty-aware baseline."""
     config = load_config(config_path)
     training_cfg = config["training"]
     model_cfg = config["model"]
@@ -62,9 +78,8 @@ def train_model(config_path: str) -> None:
     X_train, y_train, X_val, y_val = spatial_holdout_split(X, y, feature_names, holdout_fraction=config["validation"].get("holdout_fraction", 0.2))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = OceanBaselineV0(input_dim=X_train.shape[1], hidden_dim=model_cfg.get("hidden_dim", 128), output_dim=y_train.shape[1], dropout=model_cfg.get("dropout", 0.1)).to(device)
+    model = get_model(model_version, X_train.shape[1], model_cfg.get("hidden_dim", 128), y_train.shape[1], model_cfg.get("dropout", 0.1)).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(training_cfg["learning_rate"]))
-    loss_fn = nn.MSELoss()
 
     train_ds = TensorDataset(torch.tensor(X_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.float32))
     val_ds = TensorDataset(torch.tensor(X_val, dtype=torch.float32), torch.tensor(y_val, dtype=torch.float32))
@@ -81,8 +96,14 @@ def train_model(config_path: str) -> None:
             xb = xb.to(device)
             yb = yb.to(device)
             optimizer.zero_grad()
-            pred = model(xb)
-            loss = loss_fn(pred, yb)
+
+            if model_version == "v1_uncertainty":
+                mean, log_var = model(xb)
+                loss = gaussian_nll_loss(mean, log_var, yb)
+            else:
+                pred = model(xb)
+                loss = nn.MSELoss()(pred, yb)
+
             loss.backward()
             optimizer.step()
             train_loss += loss.item() * xb.size(0)
@@ -93,8 +114,13 @@ def train_model(config_path: str) -> None:
             for xb, yb in val_loader:
                 xb = xb.to(device)
                 yb = yb.to(device)
-                pred = model(xb)
-                val_loss += loss_fn(pred, yb).item() * xb.size(0)
+                if model_version == "v1_uncertainty":
+                    mean, log_var = model(xb)
+                    loss = gaussian_nll_loss(mean, log_var, yb)
+                else:
+                    pred = model(xb)
+                    loss = nn.MSELoss()(pred, yb)
+                val_loss += loss.item() * xb.size(0)
 
         train_loss /= len(train_ds)
         val_loss /= len(val_ds)
@@ -109,14 +135,15 @@ def train_model(config_path: str) -> None:
 
     checkpoint_dir = Path("checkpoints")
     checkpoint_dir.mkdir(exist_ok=True)
-    torch.save(best_state, checkpoint_dir / "v0_baseline.pt")
-    print(f"[TRAIN] Best checkpoint saved to {checkpoint_dir / 'v0_baseline.pt'}")
+    checkpoint_name = "v0_baseline.pt" if model_version == "v0" else "v1_uncertainty.pt"
+    torch.save(best_state, checkpoint_dir / checkpoint_name)
+    print(f"[TRAIN] Best checkpoint saved to {checkpoint_dir / checkpoint_name}")
 
 
 def main() -> None:
     """Entry point for training the Bay of Bengal baseline."""
     args = parse_args()
-    train_model(args.config)
+    train_model(args.config, args.model_version)
 
 
 if __name__ == "__main__":
