@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+
+# Data
+data/raw/
+data/processed/
+
+# Experiment / runtime
+*.log
+.ipynb_checkpoints/
+.DS_Store
