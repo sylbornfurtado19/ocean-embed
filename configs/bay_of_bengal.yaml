@@ -1,0 +1,37 @@
+region:
+  lat_min: 5.0
+  lat_max: 30.0
+  lon_min: 45.0
+  lon_max: 105.0
+
+dates:
+  start: "2018-01-01"
+  end: "2023-12-31"
+
+model:
+  name: "oceanembed_v0_baseline"
+  input_features:
+    - "sst"
+    - "sss"
+    - "sla"
+    - "wind_u"
+    - "wind_v"
+    - "lat"
+    - "lon"
+    - "time"
+  depth_levels: [0, 10, 20, 50, 75, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1500]
+  hidden_dim: 256
+  dropout: 0.1
+
+training:
+  batch_size: 32
+  learning_rate: 0.001
+  epochs: 50
+  seed: 42
+
+validation:
+  strategy: "argo_holdout"
+  metrics:
+    - "rmse"
+    - "mae"
+    - "r2"

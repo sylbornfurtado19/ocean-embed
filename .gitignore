@@ -1,15 +1,10 @@
-# Python
+data/
+*.nc
+*.zarr
 __pycache__/
-*.py[cod]
-*.so
-.venv/
 venv/
-
-# Data
-data/raw/
-data/processed/
-
-# Experiment / runtime
-*.log
+.env
+checkpoints/
+*.pt
+*.pth
 .ipynb_checkpoints/
-.DS_Store

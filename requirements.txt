@@ -1,23 +1,13 @@
-# Core scientific stack
-numpy
-pandas
-xarray
-scipy
-scikit-learn
-
-# Deep learning / model stack
 torch
-
-# Data acquisition / I/O
+xarray
+numpy
 netCDF4
-h5py
-
-# Visualization and dashboarding
+zarr
+copernicusmarine
+argopy
+scikit-learn
 matplotlib
-seaborn
-streamlit
 fastapi
 uvicorn
-
-# Dev / config
-PyYAML
+streamlit
+pyyaml
