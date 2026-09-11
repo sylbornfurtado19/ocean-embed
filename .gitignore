@@ -1,8 +1,9 @@
-data/
+/data/
 *.nc
 *.zarr
 __pycache__/
 venv/
+.venv/
 .env
 checkpoints/
 *.pt

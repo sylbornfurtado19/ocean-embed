@@ -104,16 +104,36 @@ ocean-embed/
 
 ## 🚀 Quickstart
 
+### Supported Environment
+- **Python**: 3.10 to 3.12 recommended. (Windows note: enable Long Paths in Registry or use short paths if installing PyTorch).
+
 ```bash
 git clone https://github.com/sylbornfurtado19/ocean-embed.git
 cd ocean-embed
-pip install -r requirements.txt
 
-# run preprocessing on a subset
-python src/data/prepare.py --config configs/bay_of_bengal.yaml
+# Create and activate virtual environment
+python -m venv .venv
+# On Windows: .venv\Scripts\activate
+# On Linux/macOS: source .venv/bin/activate
 
-# train v0 baseline
-python src/train.py --config configs/bay_of_bengal.yaml
+# Install Phase 1 dependencies
+pip install numpy pyyaml
+
+# Phase 1: Generate deterministic demo sample dataset
+python src/data/prepare.py --config configs/bay_of_bengal.yaml --demo-sample
+```
+
+> [!WARNING]
+> **Synthetic Development Fixture Notice**:
+> The `--demo-sample` mode creates a deterministic, physically-plausible mathematical approximation of surface-subsurface relationships in `data/processed/bay_of_bengal.npz` (2,000 samples across 15 standard depths). It is **not** real satellite or in-situ ocean observations and must **not** be claimed as scientifically validated GLORYS/ARGO measurements.
+
+Once deep learning dependencies (`torch`) are installed:
+```bash
+# Train v0 MSE baseline
+python src/train.py --config configs/bay_of_bengal.yaml --model_version v0
+
+# Train v1 Gaussian uncertainty baseline
+python src/train.py --config configs/bay_of_bengal.yaml --model_version v1_uncertainty
 ```
 
 ---

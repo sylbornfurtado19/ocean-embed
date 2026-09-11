@@ -1,13 +1,27 @@
-torch
-xarray
-numpy
-netCDF4
-zarr
-copernicusmarine
-argopy
-scikit-learn
-matplotlib
-fastapi
-uvicorn
-streamlit
-pyyaml
+# OceanEmbed Core Dependencies (Python 3.10 - 3.12 recommended)
+# Note: For Windows, ensure Long Path Support is enabled if installing torch from source/wheels.
+
+# Phase 1: Data Pipeline & Foundation
+numpy>=1.24.0
+pyyaml>=6.0.0
+
+# Deep Learning / ML Framework (Required for Phase 2+)
+# Install command for CPU: pip install torch --index-url https://download.pytorch.org/whl/cpu
+# Install command for CUDA: pip install torch --index-url https://download.pytorch.org/whl/cu121
+torch>=2.0.0
+scikit-learn>=1.2.0
+
+# Scientific Ocean Data & NetCDF/Zarr I/O (Required for Phase 1 real-data extensions)
+xarray>=2023.0.0
+netCDF4>=1.6.0
+zarr>=2.14.0
+copernicusmarine>=1.0.0
+argopy>=0.1.14
+
+# Visualization & Reporting
+matplotlib>=3.7.0
+
+# Future Dashboard & Serving Stack (Phase 4 & 5)
+streamlit>=1.28.0
+fastapi>=0.100.0
+uvicorn>=0.22.0

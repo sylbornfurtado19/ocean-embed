@@ -95,7 +95,7 @@ def collocate_with_predictions(argo_df: pd.DataFrame, model: Any, surface_data: 
     model.eval()
     X = np.asarray(surface_data["X"], dtype=np.float32)
     feature_names = list(surface_data["feature_names"])
-    target_depths = np.asarray(surface_data.get("depth_levels", [0.0, 10.0, 20.0, 50.0, 75.0, 100.0, 150.0, 200.0, 300.0, 400.0, 500.0, 600.0, 800.0, 1000.0, 1500.0]), dtype=np.float32)
+    target_depths = np.asarray(surface_data.get("depth_levels", [0.0, 5.0, 10.0, 20.0, 30.0, 50.0, 75.0, 100.0, 125.0, 150.0, 200.0, 300.0, 500.0, 700.0, 1000.0]), dtype=np.float32)
     lat_idx = feature_names.index("lat")
     lon_idx = feature_names.index("lon")
 

@@ -57,7 +57,7 @@ def evaluate_model(config_path: str) -> None:
     rmse_by_depth = np.sqrt(np.mean((preds - y_val) ** 2, axis=0))
     print("Depth level | RMSE")
     print("------------------")
-    depth_levels = np.array([0.0, 10.0, 20.0, 50.0, 75.0, 100.0, 150.0, 200.0, 300.0, 400.0, 500.0, 600.0, 800.0, 1000.0, 1500.0])
+    depth_levels = np.array([0.0, 5.0, 10.0, 20.0, 30.0, 50.0, 75.0, 100.0, 125.0, 150.0, 200.0, 300.0, 500.0, 700.0, 1000.0])
     for idx, depth in enumerate(depth_levels[: y_val.shape[1]]):
         print(f"{depth:>7.1f} m | {rmse_by_depth[idx]:.4f}")
 
