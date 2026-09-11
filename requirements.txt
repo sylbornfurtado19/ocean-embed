@@ -21,7 +21,12 @@ argopy>=0.1.14
 # Visualization & Reporting
 matplotlib>=3.7.0
 
-# Future Dashboard & Serving Stack (Phase 4 & 5)
+# Phase 4: Interactive Scientific Dashboard
 streamlit>=1.28.0
+plotly>=5.15.0
+folium>=0.14.0
+streamlit-folium>=0.15.0
+
+# Future Serving Stack (Phase 5)
 fastapi>=0.100.0
 uvicorn>=0.22.0

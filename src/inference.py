@@ -119,6 +119,8 @@ class OceanInferenceEngine:
             sigma = out["uncertainty_sigma"].cpu().numpy()
             emb = out["embedding"].cpu().numpy()
             regimes = out["regime_probs"].cpu().numpy()
+            anomaly = out["anomaly"].cpu().numpy()
+            clim = out["climatology_prior"].cpu().numpy()
 
         if single_sample:
             temp = temp[0]
@@ -126,6 +128,8 @@ class OceanInferenceEngine:
             sigma = sigma[0]
             emb = emb[0]
             regimes = regimes[0]
+            anomaly = anomaly[0]
+            clim = clim[0]
 
         return {
             "model_version": self.model_version,
@@ -135,7 +139,81 @@ class OceanInferenceEngine:
             "uncertainty_sigma": sigma,
             "embedding": emb,
             "regime_probs": regimes,
+            "anomaly": anomaly,
+            "climatology_prior": clim,
         }
+
+    def predict_from_location_date(
+        self,
+        latitude: float,
+        longitude: float,
+        date_val: Any,
+    ) -> dict[str, Any]:
+        """Generate deterministic demo patch and predict subsurface temperature profile for given coordinate and date.
+
+        Args:
+            latitude: Center latitude (5.0 to 23.0)
+            longitude: Center longitude (80.0 to 100.0)
+            date_val: datetime.date, datetime.datetime, or ISO string (e.g. '2023-02-15')
+
+        Returns:
+            Dictionary with prediction results, surface representative metrics, and execution time.
+        """
+        import time
+        from datetime import date as dt_date, datetime as dt_datetime
+        from src.data.generate_spatiotemporal_demo import (
+            compute_demo_climatology_profile,
+            generate_spatiotemporal_sample,
+        )
+
+        if isinstance(date_val, str):
+            parsed_date = dt_datetime.fromisoformat(date_val).date()
+        elif isinstance(date_val, dt_datetime):
+            parsed_date = date_val.date()
+        elif isinstance(date_val, dt_date):
+            parsed_date = date_val
+        else:
+            raise TypeError(f"Unsupported date type: {type(date_val)}")
+
+        center_day = float(parsed_date.timetuple().tm_yday)
+
+        # Deterministic seed unique to location and day of year
+        seed = int(abs(round(latitude, 4) * 10000 + round(longitude, 4) * 100 + center_day * 17)) % (2**31 - 1)
+        rng = np.random.default_rng(seed)
+
+        target_depths = np.array(self.target_depths, dtype=np.float32)
+        X_patch, _, climatology = generate_spatiotemporal_sample(
+            center_lat=float(latitude),
+            center_lon=float(longitude),
+            center_day=center_day,
+            target_depths=target_depths,
+            rng=rng,
+            T=31,
+            H=32,
+            W=32,
+        )
+
+        # Measure forward inference latency
+        t0 = time.perf_counter()
+        result = self.predict_spatiotemporal(X_patch, climatology_prior=climatology)
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+
+        # Extract central surface conditions at day 0 (index 15), patch center (16, 16)
+        # Channels: 0: SST, 1: SSS, 2: SLA, 3: Wind-U, 4: Wind-V
+        mid_t, mid_h, mid_w = 15, 16, 16
+        result["surface_inputs"] = {
+            "sst": float(X_patch[mid_t, 0, mid_h, mid_w]),
+            "sss": float(X_patch[mid_t, 1, mid_h, mid_w]),
+            "sla": float(X_patch[mid_t, 2, mid_h, mid_w]),
+            "wind_u": float(X_patch[mid_t, 3, mid_h, mid_w]),
+            "wind_v": float(X_patch[mid_t, 4, mid_h, mid_w]),
+        }
+        result["latitude"] = float(latitude)
+        result["longitude"] = float(longitude)
+        result["prediction_date"] = parsed_date.isoformat()
+        result["inference_time_ms"] = elapsed_ms
+        result["patch_shape"] = (1, 31, 5, 32, 32)
+        return result
 
     def extract_embedding(self, x_patch: np.ndarray) -> np.ndarray:
         """Extract explicit 512-D Ocean Embedding without full decoder execution."""
