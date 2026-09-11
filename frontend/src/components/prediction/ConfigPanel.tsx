@@ -1,0 +1,215 @@
+import React from 'react';
+import { CalendarIcon, CompassIcon, RefreshCwIcon, ThermometerIcon } from '../common/Icons';
+
+interface ConfigPanelProps {
+  latitude: number;
+  longitude: number;
+  date: string;
+  dataMode: 'synthetic' | 'real';
+  loading: boolean;
+  onLatitudeChange: (val: number) => void;
+  onLongitudeChange: (val: number) => void;
+  onDateChange: (val: string) => void;
+  onDataModeChange: (val: 'synthetic' | 'real') => void;
+  onReconstruct: () => void;
+}
+
+const PRESETS = [
+  { name: 'Central Bay of Bengal', lat: 14.5, lon: 88.0 },
+  { name: 'Cyclone Genesis Zone', lat: 11.0, lon: 89.5 },
+  { name: 'Northern Coastal', lat: 19.5, lon: 89.0 },
+  { name: 'Southern Equatorial', lat: 6.5, lon: 84.5 },
+];
+
+export const ConfigPanel: React.FC<ConfigPanelProps> = ({
+  latitude,
+  longitude,
+  date,
+  dataMode,
+  loading,
+  onLatitudeChange,
+  onLongitudeChange,
+  onDateChange,
+  onDataModeChange,
+  onReconstruct,
+}) => {
+  const isLatValid = latitude >= 5.0 && latitude <= 23.0;
+  const isLonValid = longitude >= 80.0 && longitude <= 100.0;
+  const isValid = isLatValid && isLonValid && Boolean(date);
+
+  return (
+    <div className="card">
+      <div className="card-header">
+        <div>
+          <div className="card-title">
+            <CompassIcon size={16} style={{ color: '#0284c7' }} />
+            <span>Prediction Configuration</span>
+          </div>
+          <div className="card-subtitle">Set coordinates, temporal anchor, and data mode</div>
+        </div>
+      </div>
+
+      <div className="card-body">
+        {/* Preset Locations */}
+        <div className="form-group">
+          <label className="form-label">Location Presets</label>
+          <div className="preset-pills">
+            {PRESETS.map((preset) => (
+              <button
+                key={preset.name}
+                type="button"
+                className="preset-pill"
+                onClick={() => {
+                  onLatitudeChange(preset.lat);
+                  onLongitudeChange(preset.lon);
+                }}
+              >
+                {preset.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Coordinates Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div className="form-group">
+            <label className="form-label">
+              Latitude (°N)
+              {!isLatValid && <span style={{ color: '#ef4444', marginLeft: '6px' }}>[5°–23°N]</span>}
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="5.0"
+              max="23.0"
+              className="form-input"
+              value={latitude}
+              onChange={(e) => onLatitudeChange(parseFloat(e.target.value) || 0)}
+            />
+            <div className="form-help">Supported: 5.00°N to 23.00°N</div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">
+              Longitude (°E)
+              {!isLonValid && <span style={{ color: '#ef4444', marginLeft: '6px' }}>[80°–100°E]</span>}
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="80.0"
+              max="100.0"
+              className="form-input"
+              value={longitude}
+              onChange={(e) => onLongitudeChange(parseFloat(e.target.value) || 0)}
+            />
+            <div className="form-help">Supported: 80.00°E to 100.00°E</div>
+          </div>
+        </div>
+
+        {/* Date and Data Source */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div className="form-group">
+            <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <CalendarIcon size={14} style={{ color: '#64748b' }} />
+              <span>Target Date</span>
+            </label>
+            <input
+              type="date"
+              className="form-input"
+              value={date}
+              min="2020-01-01"
+              max="2026-12-31"
+              onChange={(e) => onDateChange(e.target.value)}
+            />
+            <div className="form-help">Sequence central date</div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Observation Source</label>
+            <select
+              className="form-input"
+              value={dataMode}
+              onChange={(e) => onDataModeChange(e.target.value as 'synthetic' | 'real')}
+            >
+              <option value="synthetic">Synthetic Demo Data</option>
+              <option value="real">Real Satellite (CMEMS)</option>
+            </select>
+            <div className="form-help">Operational observation stream</div>
+          </div>
+        </div>
+
+        {/* Target summary box */}
+        <div
+          style={{
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '4px',
+            padding: '12px 16px',
+            marginBottom: '20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: '0.6875rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
+              Target Location & Date
+            </div>
+            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
+              {latitude.toFixed(2)}°N, {longitude.toFixed(2)}°E • {date}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                backgroundColor: dataMode === 'real' ? '#e0f2fe' : '#fef3c7',
+                color: dataMode === 'real' ? '#0369a1' : '#b45309',
+                fontWeight: 600,
+              }}
+            >
+              {dataMode === 'real' ? 'Real Stream' : 'Synthetic Data'}
+            </span>
+          </div>
+        </div>
+
+        {/* Action Button */}
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={!isValid || loading}
+          onClick={onReconstruct}
+        >
+          {loading ? (
+            <>
+              <RefreshCwIcon size={16} className="spin" style={{ animation: 'spin 1s linear infinite' }} />
+              <span>Reconstructing Profile...</span>
+            </>
+          ) : (
+            <>
+              <ThermometerIcon size={16} />
+              <span>Reconstruct Profile</span>
+            </>
+          )}
+        </button>
+
+        {loading && (
+          <div
+            style={{
+              marginTop: '12px',
+              fontSize: '0.75rem',
+              color: '#64748b',
+              textAlign: 'center',
+              lineHeight: 1.4,
+            }}
+          >
+            Preparing 31-day spatiotemporal tensor • Executing OceanEmbed V2 • Evaluating 90% Gaussian interval
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
