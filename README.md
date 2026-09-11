@@ -134,12 +134,19 @@ python src/train.py --config configs/bay_of_bengal.yaml --model_version v0
 # Train v1 Gaussian uncertainty baseline (saves to checkpoints/v1_uncertainty.pt)
 python src/train.py --config configs/bay_of_bengal.yaml --model_version v1_uncertainty
 
-# Run canonical evaluation (depth-wise metrics, uncertainty calibration, ARGO check)
-python src/eval.py --model_version v0
-python src/eval.py --model_version v1_uncertainty
+# Phase 3: Core OceanEmbed Architecture (Spatiotemporal ConvLSTM + CBAM + 512-D Embedding)
+# 1. Generate 31-day spatiotemporal patches (B, 31, 5, 32, 32)
+python src/data/generate_spatiotemporal_demo.py --samples 800 --seed 42
 
-# Run standalone profile inference
-python -c "from src.inference import predict_profile; res = predict_profile({'sst': 28.5, 'sss': 33.0, 'sla': 0.05, 'wind_u': -1.2, 'wind_v': -1.8, 'lat': 15.5, 'lon': 88.0, 'time': 0.2}); print('Predicted 15 Depths:', res['depths']); print('Temperature (°C):', res['temperature']); print('Uncertainty sigma (°C):', res['uncertainty_sigma'])"
+# 2. Train OceanEmbed V2 (saves to checkpoints/oceanembed_v2.pt)
+python src/train_oceanembed.py --epochs 3 --batch_size 16
+
+# 3. Run canonical evaluation and baseline comparison
+python src/eval.py --model_version oceanembed_v2
+python src/eval.py --model_version compare_all
+
+# 4. Extract 512-D Ocean Embedding and run inference
+python -c "import numpy as np; from src.inference import OceanInferenceEngine; eng = OceanInferenceEngine('checkpoints/oceanembed_v2.pt'); data = np.load('data/processed/bay_of_bengal_spatiotemporal.npz'); emb = eng.extract_embedding(data['X'][0]); print('Extracted Ocean Embedding shape:', emb.shape); res = eng.predict_spatiotemporal(data['X'][0], climatology_prior=data['climatology'][0]); print('Predicted 15 Depths:', res['depths']); print('Temperature (°C):', np.round(res['temperature'], 2))"
 ```
 
 > [!NOTE]
