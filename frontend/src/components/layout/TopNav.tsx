@@ -19,7 +19,7 @@ export const TopNav: React.FC<TopNavProps> = ({ currentPage, onPageChange, apiCo
         </div>
         <span className="nav-brand-tag">SIH 2026</span>
         <div className="nav-brand-divider" />
-        <span className="nav-brand-subtitle">Ocean Intelligence & Subsurface Temperature Reconstruction</span>
+        <span className="nav-brand-subtitle">Ocean Insights</span>
       </div>
 
       <nav className="nav-links">
