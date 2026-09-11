@@ -99,7 +99,7 @@ def run_calibration_summary(
     output_plot: str = "outputs/evaluation/calibration_plot.png",
 ) -> dict:
     """Load a trained uncertainty-aware checkpoint and evaluate calibration on held-out validation samples."""
-    checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     data = np.load(processed_path, allow_pickle=True)
     X = data["X"]
     y = data["y"]

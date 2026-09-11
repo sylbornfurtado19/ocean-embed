@@ -68,7 +68,7 @@ def evaluate_spatiotemporal_validation(
     raw_data = load_spatiotemporal_data(data_path)
     _, val_data = spatiotemporal_spatial_holdout_split(raw_data, holdout_fraction=0.2)
 
-    checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     norm_stats = checkpoint["norm_stats"]
     target_depths = checkpoint["target_depths"]
 
@@ -155,7 +155,7 @@ def evaluate_held_out_validation(
 
     _, _, X_val_raw, y_val = spatial_holdout_split(X, y, feature_names)
 
-    checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     model_version = checkpoint.get("model_version", "v0")
     norm_stats = checkpoint.get("norm_stats")
     target_depths = checkpoint.get("target_depths")

@@ -97,8 +97,14 @@ class ArgoService:
                         valid_t = [round(float(t), 2) for t in t_vals[mask]]
 
                         # Time
-                        t_val = p_ds[time_name].values if time_name else None
-                        date_str = str(t_val)[:10] if t_val is not None and not np.isnan(t_val) if isinstance(t_val, float) else str(t_val)[:10] else "unknown"
+                        date_str = "unknown"
+                        if time_name and time_name in p_ds:
+                            t_val = p_ds[time_name].values
+                            if t_val is not None:
+                                try:
+                                    date_str = str(t_val)[:10]
+                                except Exception:
+                                    date_str = "unknown"
 
                         valid_profiles.append({
                             "profile_id": f"{file_path.stem}_{idx}",

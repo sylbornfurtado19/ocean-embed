@@ -30,7 +30,7 @@ class OceanInferenceEngine:
         if not self.checkpoint_path.exists():
             raise FileNotFoundError(f"Checkpoint not found at: {self.checkpoint_path}")
 
-        checkpoint = torch.load(self.checkpoint_path, map_location="cpu")
+        checkpoint = torch.load(self.checkpoint_path, map_location="cpu", weights_only=False)
         self.model_version = checkpoint.get("model_version", "v0")
         self.target_depths = checkpoint.get(
             "target_depths",
