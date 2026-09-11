@@ -1,9 +1,11 @@
 """Independent ARGO validation for OceanEmbed.
 
-This module validates the model against sparse in-situ Argo float profiles and
-reports depth-wise RMSE/MAE/bias metrics with sample counts. The key detail is
-that ARGO depths are irregular and sparse, so predictions are interpolated from
-our 15 target depths onto the observed ARGO depths before comparing values.
+This module validates predictions against sparse in-situ Argo float profiles.
+If no ARGO NetCDF files are present in data/raw/argo, it reports:
+  STATUS = NOT AVAILABLE
+  REASON = No ARGO NetCDF profiles found in data/raw/argo.
+
+DO NOT fabricate or simulate ARGO observations.
 """
 
 from __future__ import annotations
@@ -14,7 +16,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import torch
-import xarray as xr
 import yaml
 
 
@@ -25,18 +26,27 @@ def _load_config(config: dict | str) -> dict:
         return yaml.safe_load(handle)
 
 
+def check_argo_available() -> tuple[bool, list[Path]]:
+    """Check if real ARGO NetCDF files exist in data/raw/argo."""
+    argo_dir = Path("data/raw/argo")
+    if not argo_dir.exists():
+        return False, []
+    files = sorted(argo_dir.glob("*.nc")) + sorted(argo_dir.glob("*.nc4"))
+    return len(files) > 0, files
+
+
 def load_argo_profiles(config: dict | str) -> pd.DataFrame:
     """Load all ARGO NetCDF profiles in data/raw/argo and flatten them to a row-per-observation table."""
+    import xarray as xr
+
     cfg = _load_config(config)
-    argo_dir = Path("data/raw/argo")
-    files = sorted(argo_dir.glob("*.nc")) + sorted(argo_dir.glob("*.nc4"))
-    if not files:
-        raise FileNotFoundError("No ARGO NetCDF files found in data/raw/argo. Run download_argo first.")
+    available, files = check_argo_available()
+    if not available:
+        raise FileNotFoundError("No ARGO NetCDF files found in data/raw/argo.")
 
     ds = xr.open_mfdataset([str(path) for path in files], combine="by_coords", decode_times=True)
     frames: list[pd.DataFrame] = []
 
-    # Normalize likely xarray field names from ARGO exports.
     lat_name = next((name for name in ("latitude", "LATITUDE", "lat") if name in ds.coords or name in ds), None)
     lon_name = next((name for name in ("longitude", "LONGITUDE", "lon") if name in ds.coords or name in ds), None)
     time_name = next((name for name in ("time", "TIME", "datetime") if name in ds.coords or name in ds), None)
@@ -84,18 +94,17 @@ def load_argo_profiles(config: dict | str) -> pd.DataFrame:
 
 
 def collocate_with_predictions(argo_df: pd.DataFrame, model: Any, surface_data: dict) -> pd.DataFrame:
-    """For each ARGO sample, find the nearest surface grid point and interpolate the predicted profile onto the measured depth.
-
-    This is intentionally conservative: the trained model outputs temperatures at our 15 target depths,
-    then a 1D interpolation is used to evaluate the prediction at the actual ARGO pressure/depth value.
-    """
+    """For each ARGO sample, find nearest surface grid point and interpolate predicted profile onto observed depth."""
     if "X" not in surface_data or "feature_names" not in surface_data:
         raise KeyError("surface_data requires 'X' and 'feature_names' arrays.")
 
     model.eval()
     X = np.asarray(surface_data["X"], dtype=np.float32)
     feature_names = list(surface_data["feature_names"])
-    target_depths = np.asarray(surface_data.get("depth_levels", [0.0, 5.0, 10.0, 20.0, 30.0, 50.0, 75.0, 100.0, 125.0, 150.0, 200.0, 300.0, 500.0, 700.0, 1000.0]), dtype=np.float32)
+    target_depths = np.asarray(
+        surface_data.get("depth_levels", [0.0, 5.0, 10.0, 20.0, 30.0, 50.0, 75.0, 100.0, 125.0, 150.0, 200.0, 300.0, 500.0, 700.0, 1000.0]),
+        dtype=np.float32,
+    )
     lat_idx = feature_names.index("lat")
     lon_idx = feature_names.index("lon")
 
@@ -112,10 +121,7 @@ def collocate_with_predictions(argo_df: pd.DataFrame, model: Any, surface_data: 
             else:
                 pred_values = model(x_sample).cpu().numpy()[0]
 
-        predicted_depth_profile = pred_values
-        # Interpolate to the actual ARGO depth level. This keeps the comparison valid even
-        # when ARGO depth values are not exactly aligned to the 15 target depths in the model.
-        interpolated = float(np.interp(float(row["depth"]), target_depths, predicted_depth_profile))
+        interpolated = float(np.interp(float(row["depth"]), target_depths, pred_values))
         row_out = row.to_dict()
         row_out["predicted_temperature"] = interpolated
         row_out["error"] = interpolated - float(row["temperature"])
@@ -151,12 +157,27 @@ def compute_metrics(collocated_df: pd.DataFrame) -> dict:
     return metrics
 
 
-def run_argo_validation(config: dict | str, checkpoint_path: str = "checkpoints/v0_baseline.pt") -> dict:
-    """Run the full ARGO validation flow for the configured project and return summary metrics."""
+def run_argo_validation(config: dict | str, checkpoint_path: str = "checkpoints/v0_baseline.pt") -> dict[str, Any]:
+    """Run ARGO validation if files exist, otherwise report NOT AVAILABLE gracefully."""
+    available, files = check_argo_available()
+    if not available:
+        print("[ARGO VALIDATION]")
+        print("  STATUS: NOT AVAILABLE")
+        print("  REASON: No ARGO NetCDF files found in data/raw/argo.")
+        print("  NOTICE: Real in-situ ARGO profiles will be ingested in future operational phases.")
+        return {
+            "status": "NOT_AVAILABLE",
+            "reason": "No ARGO NetCDF profiles found in data/raw/argo",
+            "overall_rmse": None,
+            "overall_mae": None,
+            "overall_bias": None,
+            "n_samples": 0,
+        }
+
     cfg = _load_config(config)
     processed_path = Path("data/processed/bay_of_bengal.npz")
     if not processed_path.exists():
-        raise FileNotFoundError("Processed arrays are missing. Run src/data/prepare.py before validation.")
+        raise FileNotFoundError("Processed arrays missing. Run src/data/prepare.py first.")
 
     data = np.load(processed_path)
     surface_data = {
@@ -167,20 +188,13 @@ def run_argo_validation(config: dict | str, checkpoint_path: str = "checkpoints/
 
     argo_df = load_argo_profiles(cfg)
     checkpoint = torch.load(checkpoint_path, map_location="cpu")
-    model = torch.load(checkpoint_path, map_location="cpu") if isinstance(checkpoint, torch.nn.Module) else None
-
-    if model is None:
-        from src.models.v0_baseline import OceanBaselineV0
-        model = OceanBaselineV0(input_dim=surface_data["X"].shape[1], hidden_dim=cfg["model"].get("hidden_dim", 128), output_dim=len(cfg["model"]["target_depths"]), dropout=cfg["model"].get("dropout", 0.1))
-        model.load_state_dict(checkpoint["model_state"])
+    from src.models.v0_baseline import OceanBaselineV0
+    model = OceanBaselineV0(input_dim=surface_data["X"].shape[1], hidden_dim=cfg["model"].get("hidden_dim", 128), output_dim=len(cfg["model"]["target_depths"]))
+    model.load_state_dict(checkpoint["model_state"])
 
     collocated_df = collocate_with_predictions(argo_df, model, surface_data)
     metrics = compute_metrics(collocated_df)
-    print("Depth | RMSE | MAE | bias | n_samples")
-    print("----- | ---- | --- | ---- | ---------")
-    for _, row in metrics["per_depth"].iterrows():
-        print(f"{row['depth']:>5.0f} | {row['rmse']:.4f} | {row['mae']:.4f} | {row['bias']:.4f} | {int(row['n_samples'])}")
-    print(f"Overall RMSE={metrics['overall_rmse']:.4f}, MAE={metrics['overall_mae']:.4f}, bias={metrics['overall_bias']:.4f}, n={metrics['n_samples']}")
+    metrics["status"] = "AVAILABLE"
     return metrics
 
 

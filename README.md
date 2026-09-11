@@ -127,14 +127,25 @@ python src/data/prepare.py --config configs/bay_of_bengal.yaml --demo-sample
 > **Synthetic Development Fixture Notice**:
 > The `--demo-sample` mode creates a deterministic, physically-plausible mathematical approximation of surface-subsurface relationships in `data/processed/bay_of_bengal.npz` (2,000 samples across 15 standard depths). It is **not** real satellite or in-situ ocean observations and must **not** be claimed as scientifically validated GLORYS/ARGO measurements.
 
-Once deep learning dependencies (`torch`) are installed:
-```bash
-# Train v0 MSE baseline
+# Phase 2: Baseline Model Training
+# Train v0 MSE baseline (saves to checkpoints/v0_baseline.pt)
 python src/train.py --config configs/bay_of_bengal.yaml --model_version v0
 
-# Train v1 Gaussian uncertainty baseline
+# Train v1 Gaussian uncertainty baseline (saves to checkpoints/v1_uncertainty.pt)
 python src/train.py --config configs/bay_of_bengal.yaml --model_version v1_uncertainty
+
+# Run canonical evaluation (depth-wise metrics, uncertainty calibration, ARGO check)
+python src/eval.py --model_version v0
+python src/eval.py --model_version v1_uncertainty
+
+# Run standalone profile inference
+python -c "from src.inference import predict_profile; res = predict_profile({'sst': 28.5, 'sss': 33.0, 'sla': 0.05, 'wind_u': -1.2, 'wind_v': -1.8, 'lat': 15.5, 'lon': 88.0, 'time': 0.2}); print('Predicted 15 Depths:', res['depths']); print('Temperature (°C):', res['temperature']); print('Uncertainty sigma (°C):', res['uncertainty_sigma'])"
 ```
+
+> [!NOTE]
+> **Independent ARGO Validation Status**:
+> Currently **NOT AVAILABLE**. Real ARGO NetCDF files are not yet downloaded in `data/raw/argo`. The evaluation engine gracefully skips in-situ verification without fabricating data. Real in-situ ARGO profiles and satellite grids will be integrated in subsequent operational phases.
+
 
 ---
 
