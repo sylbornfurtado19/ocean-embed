@@ -21,6 +21,11 @@ class ModelNotAvailableError(Exception):
     pass
 
 
+class RealDataNotAvailableError(Exception):
+    """Raised when real satellite data mode is requested but real data is not configured or available."""
+    pass
+
+
 class ModelService:
     """Singleton service managing OceanEmbed V2 model lifecycle and inference."""
 
@@ -111,8 +116,55 @@ class ModelService:
         date_val: Any,
         data_mode: str = "synthetic",
     ) -> dict[str, Any]:
-        """Execute model inference and return formatted prediction dictionary."""
+        """Execute model inference and return formatted prediction dictionary.
+
+        Adheres strictly to Part K:
+        - If data_mode == 'synthetic': use deterministic demo generator.
+        - If data_mode == 'real': use real satellite data only if genuinely available.
+          Otherwise raise RealDataNotAvailableError (which maps to HTTP 503).
+          NEVER silently fall back to synthetic mode.
+        """
         engine = self.get_engine()
+        if data_mode == "real":
+            sat_dir = settings.satellite_data_dir
+            sat_files = (
+                list(sat_dir.glob("*.nc"))
+                + list(sat_dir.glob("**/*.nc"))
+                + list(sat_dir.glob("*.zarr"))
+            ) if sat_dir.exists() else []
+
+            if not sat_files:
+                raise RealDataNotAvailableError(
+                    "Real satellite data pipeline is not configured. "
+                    "No satellite raster files were found in data/raw/satellite. "
+                    "In adherence to SIH scientific honesty rules, real-mode inference cannot proceed without verified observations."
+                )
+
+            try:
+                from src.data.real_satellite_preprocessing import RealSatellitePreprocessor
+                import xarray as xr
+                preprocessor = RealSatellitePreprocessor()
+                ds = xr.open_mfdataset([str(f) for f in sat_files], combine="by_coords")
+                x_patch = preprocessor.preprocess_patch(
+                    ds=ds,
+                    center_lat=latitude,
+                    center_lon=longitude,
+                    center_date=date_val,
+                    norm_stats=engine.norm_stats,
+                )
+                result = engine.predict_spatiotemporal(x_patch)
+                result["latitude"] = latitude
+                result["longitude"] = longitude
+                result["prediction_date"] = str(date_val)
+                result["data_mode"] = "real_satellite"
+                return result
+            except Exception as err:
+                logger.error("Failed to process real satellite rasters for prediction: %s", err)
+                raise RealDataNotAvailableError(
+                    f"Real satellite data processing failed: {err}"
+                )
+
+        # Default synthetic mode
         result = engine.predict_from_location_date(latitude, longitude, date_val)
-        result["data_mode"] = "synthetic_demo" if data_mode == "synthetic" else "real_satellite"
+        result["data_mode"] = "synthetic_demo"
         return result

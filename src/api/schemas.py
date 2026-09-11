@@ -130,6 +130,9 @@ class ArgoStatusResponse(BaseModel):
     profiles_available: int
     directory: str
     message: str
+    geographic_coverage: dict[str, Any] | None = None
+    depth_coverage: dict[str, Any] | None = None
+    temporal_coverage: dict[str, Any] | None = None
 
 
 class SatelliteStatusResponse(BaseModel):

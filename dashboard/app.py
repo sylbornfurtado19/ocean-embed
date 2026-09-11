@@ -168,11 +168,29 @@ def main() -> None:
         )
 
         st.markdown("---")
+        st.markdown("### 📡 Data Source")
+        sat_dir = WORKSPACE_ROOT / "data" / "raw" / "satellite"
+        real_sat_available = sat_dir.exists() and len(list(sat_dir.glob("*.nc")) + list(sat_dir.glob("*.zarr"))) > 0
+        data_source_options = ["Synthetic Demo (Active)"]
+        if real_sat_available:
+            data_source_options.append("Real Satellite (CMEMS)")
+        else:
+            data_source_options.append("Real Satellite (Not Configured)")
+
+        selected_data_source = st.radio(
+            "Select Input Source",
+            data_source_options,
+            index=0,
+            help="Select verified deterministic synthetic simulation or ingested real satellite rasters.",
+        )
+        is_real_data_mode = (selected_data_source == "Real Satellite (CMEMS)")
+
+        st.markdown("---")
         st.markdown("### ⚙️ View Options")
         show_uncertainty = st.checkbox("Show 90% Uncertainty Envelope", value=True)
         show_climatology = st.checkbox("Show Climatology Decomposition", value=True)
         show_regime = st.checkbox("Show Latent Regime Context", value=True)
-        show_surface = st.checkbox("Show Synthetic Surface Inputs", value=True)
+        show_surface = st.checkbox("Show Surface Inputs", value=True)
         show_embedding = st.checkbox("Show 512-D Ocean Embedding", value=True)
         show_argo = st.checkbox("Show ARGO Verification Status", value=True)
 
@@ -196,11 +214,18 @@ def main() -> None:
             """
         )
 
-    # Header
+    # Header with Honest Mode Badge
+    badge_html = (
+        '<span class="demo-badge" style="background-color: #dbeafe; color: #1e40af; border-color: #bfdbfe;">'
+        'REAL SATELLITE INPUT — MODEL TRAINED ON SYNTHETIC DEVELOPMENT DATA</span>'
+        if is_real_data_mode
+        else '<span class="demo-badge">DEMO MODE — SYNTHETIC DATA</span>'
+    )
+
     st.markdown(
-        """
+        f"""
         <div class="main-header">
-            <span class="demo-badge">DEMO MODE — SYNTHETIC DATA</span>
+            {badge_html}
             <h1 style="margin: 0.3rem 0 0.1rem 0; font-size: 2.2rem; color: #0f172a;">OceanEmbed</h1>
             <p style="margin: 0; color: #64748b; font-size: 1.05rem;">
                 Satellite-Based Subsurface Ocean Temperature Reconstruction · Smart India Hackathon 2026 (Team Bug Dealers)
@@ -377,7 +402,20 @@ def main() -> None:
                     unsafe_allow_html=True,
                 )
             else:
-                st.info("ARGO data detected. In-situ overlay active.")
+                from src.api.services.argo_service import ArgoService
+                argo_srv = ArgoService()
+                argo_status = argo_srv.get_argo_status()
+                st.success(f"✅ In-situ ARGO observations detected ({argo_status['profiles_available']} valid profiles in Bay of Bengal domain).")
+                nearby = argo_srv.get_profiles(result["latitude"], result["longitude"], radius_deg=2.5)
+                if nearby:
+                    nearest = nearby[0]
+                    st.info(
+                        f"📍 **Nearest ARGO Profile:** `{nearest['profile_id']}`  \n"
+                        f"**Coordinates:** {nearest['latitude']}°N, {nearest['longitude']}°E  \n"
+                        f"**Observed Depth Range:** {nearest['depth_min']} m to {nearest['depth_max']} m ({nearest['num_levels']} levels)"
+                    )
+                else:
+                    st.caption("No ARGO float profiles located within 2.5° radius of selected target coordinate.")
 
     else:
         # Prompt user to click Reconstruct Profile

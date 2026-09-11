@@ -8,7 +8,7 @@ import numpy as np
 
 from src.api.dependencies import get_model_service
 from src.api.schemas import PredictionRequest, PredictionResponse
-from src.api.services.model_service import ModelNotAvailableError, ModelService
+from src.api.services.model_service import ModelNotAvailableError, ModelService, RealDataNotAvailableError
 
 logger = logging.getLogger("oceanembed.api.inference")
 router = APIRouter(tags=["Inference"])
@@ -41,6 +41,12 @@ def predict_subsurface_profile(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"OceanEmbed model unavailable: {err}",
+        )
+    except RealDataNotAvailableError as err:
+        logger.warning("Real data inference requested but real data is unavailable: %s", err)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(err),
         )
     except Exception as ex:
         logger.error("Unexpected error during inference execution: %s", ex, exc_info=True)
