@@ -81,6 +81,7 @@ Multi-source Surface Data → Ocean Encoder (CNN/ConvLSTM) → CBAM Attention
 - [x] **Phase 2** — Encoder–decoder training & uncertainty baseline
 - [x] **Phase 3** — Core OceanEmbed architecture (CNN-ConvLSTM-CBAM + 512-D Embedding)
 - [x] **Phase 4** — Interactive scientific dashboard & inference integration
+- [x] **Phase 5** — Production FastAPI backend, Docker, ARGO/satellite ingestion layers & automated tests
 
 ---
 
@@ -88,10 +89,17 @@ Multi-source Surface Data → Ocean Encoder (CNN/ConvLSTM) → CBAM Attention
 
 ```
 ocean-embed/
-├── data/            # raw/processed GLORYS, ARGO (gitignored)
+├── data/            # raw/processed GLORYS, ARGO NetCDF (gitignored)
 ├── src/
+│   ├── config.py    # centralized environment configuration
 │   ├── data/        # download, regrid, preprocessing, demo spatiotemporal generator
 │   ├── models/      # baseline & OceanEmbed V2 architectures
+│   ├── api/         # FastAPI production serving layer
+│   │   ├── main.py
+│   │   ├── schemas.py
+│   │   ├── dependencies.py
+│   │   ├── routes/  # health, inference, data routes
+│   │   └── services/# model, satellite, and argo services
 │   ├── train.py     # baseline training
 │   ├── train_oceanembed.py # OceanEmbed V2 training
 │   ├── eval.py      # canonical evaluation entrypoint
@@ -99,8 +107,11 @@ ocean-embed/
 ├── dashboard/       # Streamlit interactive scientific demonstration
 │   ├── app.py       # main dashboard entrypoint
 │   └── components/  # modular map, plots, metrics, regime, profile table
-├── tests/           # automated test suite for dashboard & inference
+├── tests/           # automated test suites (Phase 4 dashboard + Phase 5 API)
 ├── configs/         # per-experiment yaml configs
+├── Dockerfile       # containerized production deployment
+├── docker-compose.yml
+├── .env.example     # environment configuration template
 └── requirements.txt
 ```
 
@@ -184,6 +195,85 @@ streamlit run dashboard/app.py
 8. **Inspect Ocean Embedding**: View the 512-D bottleneck representation.
 9. **Export Data**: Click "Download Profile CSV" to download the reconstructed profile data.
 10. **ARGO Status**: Observe the honest `STATUS: NOT AVAILABLE` indicator explaining that real in-situ ARGO profiles will be ingested in future operational phases.
+
+```bash
+# Phase 5: Production FastAPI Backend & Serving
+# Start FastAPI server locally
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+
+# Run Phase 5 automated API tests (22/22 tests)
+pytest tests/test_phase5_api.py -v
+```
+
+### Phase 5 — Production FastAPI Backend & Ingestion Architecture
+
+OceanEmbed exposes a production-oriented RESTful backend built with **FastAPI** and containerized with **Docker**, designed to serve subsurface ocean reconstructions to downstream meteorological, cyclone monitoring, and marine-spatial systems.
+
+> [!IMPORTANT]
+> **Data Mode Integrity**:
+> Real satellite and ARGO data must be configured separately; **synthetic demo mode remains the active default** for reproducible testing and hackathon demonstration. Endpoints report `synthetic_demo` honestly when real observational feeds are unconfigured.
+
+- **FastAPI Endpoints**:
+  - `GET /` — Root metadata and navigation.
+  - `GET /health` — Service health, model availability, and real data integration status.
+  - `GET /model/status` — Comprehensive metadata directly inspected from the loaded OceanEmbed V2 checkpoint (embedding dimensions, depth levels, domain bounds).
+  - `POST /predict` — Core inference endpoint. Accepts `{"latitude": 14.5, "longitude": 88.0, "date": "2023-06-15"}` and returns 15-depth vertical temperatures, uncertainty ($\pm 1.645\sigma$), $K=4$ regime probabilities, and 512-D ocean embedding.
+  - `GET /data/argo/status` — In-situ ARGO NetCDF discovery status in `data/raw/argo`.
+  - `GET /data/satellite/status` — Satellite provider status (CMEMS provider adapter vs synthetic demo fixture).
+  - `GET /data/argo/profiles` — In-situ profile search by coordinate and radius.
+  - `GET /docs` & `GET /redoc` — Interactive OpenAPI / Swagger documentation.
+
+- **Example `/predict` Request**:
+```bash
+curl -X POST "http://localhost:8000/predict" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "latitude": 14.0,
+       "longitude": 88.0,
+       "date": "2023-02-15"
+     }'
+```
+
+- **Example Response**:
+```json
+{
+  "latitude": 14.0,
+  "longitude": 88.0,
+  "date": "2023-02-15",
+  "depths": [0.0, 5.0, 10.0, 20.0, 30.0, 50.0, 75.0, 100.0, 125.0, 150.0, 200.0, 300.0, 500.0, 700.0, 1000.0],
+  "temperatures": [28.7564, 27.691, 26.5223, 24.1645, 21.9418, 18.0167, 14.1902, 11.4721, 9.5287, 8.1635, 6.5554, 5.509, 5.3915, 5.4816, 5.586],
+  "sigma": [0.2108, 0.2185, 0.2246, 0.2335, 0.2398, 0.2489, 0.2506, 0.2346, 0.2171, 0.2014, 0.1786, 0.1504, 0.1212, 0.1056, 0.091],
+  "lower_90": [28.4096, 27.3316, 26.1528, 23.7804, 21.5473, 17.6073, 13.7779, 11.0862, 9.1716, 7.8322, 6.2616, 5.2616, 5.1921, 5.3079, 5.4363],
+  "upper_90": [29.1032, 28.0504, 26.8918, 24.5486, 22.3363, 18.4261, 14.6025, 11.858, 9.8858, 8.4948, 6.8492, 5.7564, 5.5909, 5.6553, 5.7357],
+  "regime_probs": [0.1444, 0.1652, 0.3561, 0.3343],
+  "embedding": [0.1205, -0.0412, "... 512 dimensions ..."],
+  "inference_latency_ms": 14.2,
+  "data_mode": "synthetic_demo"
+}
+```
+
+- **Containerized Deployment (Docker & Compose)**:
+```bash
+# Build and run Docker container on CPU
+docker build -t oceanembed-api .
+docker run -d -p 8000:8000 --name oceanembed-api oceanembed-api
+
+# Or using Docker Compose
+docker-compose up -d
+```
+
+- **Environment Configuration (`.env`)**:
+Copy `.env.example` to `.env` to configure runtime settings:
+```bash
+OCEAN_DATA_MODE=synthetic                  # 'synthetic' or 'real'
+OCEANEMBED_CHECKPOINT=checkpoints/oceanembed_v2.pt
+ARGO_DATA_DIR=data/raw/argo
+SATELLITE_DATA_DIR=data/raw/satellite
+CMEMS_USERNAME=                            # Copernicus Marine user
+CMEMS_PASSWORD=                            # Copernicus Marine password
+API_HOST=0.0.0.0
+API_PORT=8000
+```
 
 > [!NOTE]
 > **Independent ARGO Validation Status**:

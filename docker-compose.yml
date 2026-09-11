@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  oceanembed-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: oceanembed-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - OCEAN_DATA_MODE=synthetic
+      - OCEANEMBED_CHECKPOINT=checkpoints/oceanembed_v2.pt
+      - ARGO_DATA_DIR=data/raw/argo
+      - SATELLITE_DATA_DIR=data/raw/satellite
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./checkpoints:/app/checkpoints:ro
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
