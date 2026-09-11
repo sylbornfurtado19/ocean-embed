@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapPinIcon } from '../common/Icons';
+import { LayersIcon, MapPinIcon } from '../common/Icons';
 
 interface BayOfBengalMapProps {
   latitude: number;
@@ -17,55 +17,40 @@ const DOMAIN_BOUNDS = {
   lonMax: 100.0,
 };
 
-// Clean scientific target marker icon using SVG
-const createTargetIcon = () => {
+export type MapTileMode = 'dark' | 'satellite' | 'ocean';
+
+const TILE_LAYERS: Record<MapTileMode, { url: string; attribution: string; name: string }> = {
+  dark: {
+    name: 'Dark Ocean',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+  },
+  satellite: {
+    name: 'Satellite',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+  },
+  ocean: {
+    name: 'Ocean Topo',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri',
+  },
+};
+
+// Glowing pulse marker icon with crosshairs using HTML divIcon
+const createPulseIcon = () => {
   return L.divIcon({
-    className: 'custom-map-marker',
+    className: 'custom-pulse-marker',
     html: `
-      <div style="
-        position: relative;
-        width: 24px;
-        height: 24px;
-        transform: translate(-12px, -12px);
-      ">
-        <div style="
-          position: absolute;
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: rgba(2, 132, 199, 0.25);
-          border: 1.5px solid #0284c7;
-        "></div>
-        <div style="
-          position: absolute;
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #0284c7;
-          top: 8px;
-          left: 8px;
-          box-shadow: 0 0 4px rgba(0,0,0,0.5);
-        "></div>
-        <div style="
-          position: absolute;
-          width: 28px;
-          height: 1px;
-          background: #0284c7;
-          top: 11.5px;
-          left: -2px;
-        "></div>
-        <div style="
-          position: absolute;
-          width: 1px;
-          height: 28px;
-          background: #0284c7;
-          top: -2px;
-          left: 11.5px;
-        "></div>
+      <div class="ocean-pulse-marker">
+        <div class="ocean-pulse-ring"></div>
+        <div class="ocean-crosshair-h"></div>
+        <div class="ocean-crosshair-v"></div>
+        <div class="ocean-pulse-core"></div>
       </div>
     `,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
   });
 };
 
@@ -77,7 +62,11 @@ export const BayOfBengalMap: React.FC<BayOfBengalMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
 
+  const [tileMode, setTileMode] = useState<MapTileMode>('dark');
+
+  // Initialize Map
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
@@ -92,14 +81,16 @@ export const BayOfBengalMap: React.FC<BayOfBengalMapProps> = ({
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // CartoDB Positron Basemap - Clean, subdued, research-grade
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
-      subdomains: 'abcd',
+    // Initial tile layer (Dark Ocean)
+    const activeConfig = TILE_LAYERS[tileMode];
+    const initialTileLayer = L.tileLayer(activeConfig.url, {
+      attribution: activeConfig.attribution,
       maxZoom: 19,
+      subdomains: 'abcd',
     }).addTo(map);
+    tileLayerRef.current = initialTileLayer;
 
-    // Draw Supported Domain Bounding Box
+    // Draw Supported Domain Bounding Box with Cyan Neon Glow
     const domainPolygon = L.polygon(
       [
         [DOMAIN_BOUNDS.latMin, DOMAIN_BOUNDS.lonMin],
@@ -108,23 +99,23 @@ export const BayOfBengalMap: React.FC<BayOfBengalMapProps> = ({
         [DOMAIN_BOUNDS.latMin, DOMAIN_BOUNDS.lonMax],
       ],
       {
-        color: '#0284c7',
-        weight: 1.5,
-        dashArray: '4, 4',
-        fillColor: '#0284c7',
-        fillOpacity: 0.05,
+        color: '#0ea5e9',
+        weight: 2,
+        dashArray: '6, 6',
+        fillColor: '#0ea5e9',
+        fillOpacity: 0.08,
       }
     ).addTo(map);
 
-    domainPolygon.bindTooltip('Supported Domain (5°N–23°N, 80°E–100°E)', {
+    domainPolygon.bindTooltip('Supported Ocean Domain (5°N–23°N, 80°E–100°E)', {
       permanent: false,
       direction: 'top',
       className: 'domain-tooltip',
     });
 
-    // Add selected coordinate marker
+    // Add glowing pulse coordinate marker
     const marker = L.marker([latitude, longitude], {
-      icon: createTargetIcon(),
+      icon: createPulseIcon(),
       draggable: true,
     }).addTo(map);
 
@@ -159,6 +150,25 @@ export const BayOfBengalMap: React.FC<BayOfBengalMapProps> = ({
     };
   }, []);
 
+  // Handle Tile Mode Changes
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    const map = mapInstanceRef.current;
+
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+
+    const config = TILE_LAYERS[tileMode];
+    const newLayer = L.tileLayer(config.url, {
+      attribution: config.attribution,
+      maxZoom: 19,
+      subdomains: 'abcd',
+    }).addTo(map);
+
+    tileLayerRef.current = newLayer;
+  }, [tileMode]);
+
   // Update marker position when coordinates change from outside
   useEffect(() => {
     if (markerRef.current) {
@@ -167,44 +177,95 @@ export const BayOfBengalMap: React.FC<BayOfBengalMapProps> = ({
   }, [latitude, longitude]);
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
       <div className="card-header">
         <div>
           <div className="card-title">
-            <MapPinIcon size={16} style={{ color: '#0284c7' }} />
+            <MapPinIcon size={18} style={{ color: '#0ea5e9' }} />
             <span>Bay of Bengal Spatial Domain</span>
           </div>
           <div className="card-subtitle">
-            Domain: 5.0°N–23.0°N | 80.0°E–100.0°E
+            5.0°N–23.0°N | 80.0°E–100.0°E
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.6875rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
-            Selected Position
-          </div>
-          <div style={{ fontSize: '0.8125rem', fontWeight: 600, fontFamily: 'var(--font-mono)', color: '#0f172a' }}>
-            {latitude.toFixed(2)}°N, {longitude.toFixed(2)}°E
+
+        {/* Custom Layer Switcher */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <LayersIcon size={14} style={{ color: '#64748b' }} />
+          <div
+            style={{
+              display: 'flex',
+              background: 'rgba(7, 18, 36, 0.9)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '6px',
+              padding: '2px',
+            }}
+          >
+            {(['dark', 'satellite', 'ocean'] as MapTileMode[]).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setTileMode(mode)}
+                style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: tileMode === mode ? 700 : 500,
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  background: tileMode === mode ? 'rgba(14, 165, 233, 0.25)' : 'transparent',
+                  color: tileMode === mode ? '#38bdf8' : '#94a3b8',
+                  border: tileMode === mode ? '1px solid rgba(14, 165, 233, 0.4)' : '1px solid transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {TILE_LAYERS[mode].name}
+              </button>
+            ))}
           </div>
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: '380px', position: 'relative' }}>
-        <div ref={mapContainerRef} style={{ width: '100%', height: '100%', minHeight: '380px' }} />
+
+      <div style={{ flex: 1, minHeight: '400px', position: 'relative' }}>
+        <div ref={mapContainerRef} style={{ width: '100%', height: '100%', minHeight: '400px' }} />
+
+        {/* Dynamic Glassmorphic Floating Coordinate Badge Overlay */}
         <div
           style={{
             position: 'absolute',
-            bottom: '12px',
-            left: '12px',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            border: '1px solid #cbd5e1',
-            borderRadius: '4px',
-            padding: '4px 8px',
-            fontSize: '0.6875rem',
-            color: '#475569',
-            pointerEvents: 'none',
+            bottom: '16px',
+            left: '16px',
+            background: 'rgba(5, 12, 26, 0.85)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(14, 165, 233, 0.3)',
+            borderRadius: '8px',
+            padding: '10px 14px',
+            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.5)',
             zIndex: 400,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
           }}
         >
-          Click within domain bounding box to update target coordinate
+          <div>
+            <div style={{ fontSize: '0.625rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+              Active Coordinate Target
+            </div>
+            <div style={{ fontSize: '0.9375rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>
+              {latitude.toFixed(2)}°N, {longitude.toFixed(2)}°E
+            </div>
+          </div>
+
+          <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }} />
+
+          <div>
+            <div style={{ fontSize: '0.625rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+              Depth Profiling Range
+            </div>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 600, fontFamily: 'var(--font-mono)', color: '#f1f5f9' }}>
+              0 – 1000 m (15 Levels)
+            </div>
+          </div>
         </div>
       </div>
     </div>

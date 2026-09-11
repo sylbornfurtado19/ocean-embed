@@ -15,10 +15,12 @@ interface ConfigPanelProps {
 }
 
 const PRESETS = [
-  { name: 'Central Bay of Bengal', lat: 14.5, lon: 88.0 },
-  { name: 'Cyclone Genesis Zone', lat: 11.0, lon: 89.5 },
-  { name: 'Northern Coastal', lat: 19.5, lon: 89.0 },
-  { name: 'Southern Equatorial', lat: 6.5, lon: 84.5 },
+  { name: 'Central Bay of Bengal', icon: '🌊', lat: 14.5, lon: 88.0, desc: 'Deep Ocean Basin' },
+  { name: 'Cyclone Genesis Zone', icon: '🌀', lat: 11.0, lon: 89.5, desc: 'High TCHP Heat Potential' },
+  { name: 'Northern Coastal Shelf', icon: '⚓', lat: 19.5, lon: 89.0, desc: 'Estuarine Freshwater Outflow' },
+  { name: 'Andaman Sea Basin', icon: '🏝️', lat: 12.0, lon: 93.5, desc: 'Internal Waves & Stratification' },
+  { name: 'Southern Equatorial', icon: '🧭', lat: 6.5, lon: 84.5, desc: 'Equatorial Jet Watermass' },
+  { name: 'Sri Lanka Basin', icon: '🛥️', lat: 8.0, lon: 82.5, desc: 'Coastal Summer Upwelling' },
 ];
 
 export const ConfigPanel: React.FC<ConfigPanelProps> = ({
@@ -42,31 +44,41 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
       <div className="card-header">
         <div>
           <div className="card-title">
-            <CompassIcon size={16} style={{ color: '#0284c7' }} />
+            <CompassIcon size={18} style={{ color: '#0ea5e9' }} />
             <span>Prediction Configuration</span>
           </div>
-          <div className="card-subtitle">Set coordinates, temporal anchor, and data mode</div>
+          <div className="card-subtitle">Set coordinates, temporal anchor, and data stream</div>
         </div>
       </div>
 
       <div className="card-body">
-        {/* Preset Locations */}
+        {/* Preset Locations Visual Quick-Pickers */}
         <div className="form-group">
-          <label className="form-label">Location Presets</label>
+          <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Visual Region Quick-Pickers</span>
+            <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>Select region preset</span>
+          </label>
           <div className="preset-pills">
-            {PRESETS.map((preset) => (
-              <button
-                key={preset.name}
-                type="button"
-                className="preset-pill"
-                onClick={() => {
-                  onLatitudeChange(preset.lat);
-                  onLongitudeChange(preset.lon);
-                }}
-              >
-                {preset.name}
-              </button>
-            ))}
+            {PRESETS.map((preset) => {
+              const isActive = Math.abs(latitude - preset.lat) < 0.2 && Math.abs(longitude - preset.lon) < 0.2;
+              return (
+                <button
+                  key={preset.name}
+                  type="button"
+                  className={`preset-pill ${isActive ? 'active' : ''}`}
+                  onClick={() => {
+                    onLatitudeChange(preset.lat);
+                    onLongitudeChange(preset.lon);
+                  }}
+                >
+                  <span className="preset-icon">{preset.icon}</span>
+                  <div>
+                    <span className="preset-name">{preset.name}</span>
+                    <span className="preset-coords">{preset.lat.toFixed(1)}°N, {preset.lon.toFixed(1)}°E</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -111,7 +123,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           <div className="form-group">
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <CalendarIcon size={14} style={{ color: '#64748b' }} />
+              <CalendarIcon size={14} style={{ color: '#0ea5e9' }} />
               <span>Target Date</span>
             </label>
             <input
@@ -126,25 +138,25 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
           </div>
 
           <div className="form-group">
-            <label className="form-label">Observation Source</label>
+            <label className="form-label">Observation Stream</label>
             <select
               className="form-input"
               value={dataMode}
               onChange={(e) => onDataModeChange(e.target.value as 'synthetic' | 'real')}
             >
-              <option value="synthetic">Synthetic Demo Data</option>
+              <option value="synthetic">Synthetic Development Stream</option>
               <option value="real">Real Satellite (CMEMS)</option>
             </select>
-            <div className="form-help">Operational observation stream</div>
+            <div className="form-help">Input feature stream</div>
           </div>
         </div>
 
         {/* Target summary box */}
         <div
           style={{
-            backgroundColor: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: '4px',
+            backgroundColor: 'rgba(7, 18, 36, 0.8)',
+            border: '1px solid rgba(14, 165, 233, 0.25)',
+            borderRadius: '8px',
             padding: '12px 16px',
             marginBottom: '20px',
             display: 'flex',
@@ -153,10 +165,10 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
           }}
         >
           <div>
-            <div style={{ fontSize: '0.6875rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
-              Target Location & Date
+            <div style={{ fontSize: '0.6875rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
+              Target Coordinates & Anchor Date
             </div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
+            <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>
               {latitude.toFixed(2)}°N, {longitude.toFixed(2)}°E • {date}
             </div>
           </div>
@@ -164,11 +176,13 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
             <span
               style={{
                 fontSize: '0.75rem',
-                padding: '2px 8px',
+                padding: '3px 10px',
                 borderRadius: '4px',
-                backgroundColor: dataMode === 'real' ? '#e0f2fe' : '#fef3c7',
-                color: dataMode === 'real' ? '#0369a1' : '#b45309',
+                backgroundColor: dataMode === 'real' ? 'rgba(14, 165, 233, 0.2)' : 'rgba(245, 158, 11, 0.15)',
+                border: dataMode === 'real' ? '1px solid rgba(14, 165, 233, 0.4)' : '1px solid rgba(245, 158, 11, 0.3)',
+                color: dataMode === 'real' ? '#38bdf8' : '#fbbf24',
                 fontWeight: 600,
+                fontFamily: 'var(--font-mono)',
               }}
             >
               {dataMode === 'real' ? 'Real Stream' : 'Synthetic Data'}
@@ -191,7 +205,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
           ) : (
             <>
               <ThermometerIcon size={16} />
-              <span>Reconstruct Profile</span>
+              <span>Reconstruct 3D Profile</span>
             </>
           )}
         </button>
@@ -201,12 +215,13 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({
             style={{
               marginTop: '12px',
               fontSize: '0.75rem',
-              color: '#64748b',
+              color: '#94a3b8',
               textAlign: 'center',
               lineHeight: 1.4,
+              fontFamily: 'var(--font-mono)',
             }}
           >
-            Preparing 31-day spatiotemporal tensor • Executing OceanEmbed V2 • Evaluating 90% Gaussian interval
+            Processing 31-day spatiotemporal tensor • Executing OceanEmbed V2 • Evaluating 90% Gaussian interval
           </div>
         )}
       </div>
