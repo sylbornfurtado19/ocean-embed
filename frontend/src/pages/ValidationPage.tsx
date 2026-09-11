@@ -4,25 +4,7 @@ import { ActivityIcon, AlertCircleIcon, DatabaseIcon } from '../components/commo
 export const ValidationPage: React.FC = () => {
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      {/* Header */}
-      <div className="compact-hero" style={{ marginBottom: '24px' }}>
-        <div className="hero-main">
-          <h1>Model Evaluation & Architectural Benchmarks</h1>
-          <p>
-            Comparative empirical performance evaluation across Phase 2 baseline models and Phase 3 OceanEmbed V2 deep spatiotemporal architecture.
-          </p>
-        </div>
-        <div className="hero-specs">
-          <div className="spec-item">
-            <span className="spec-label">Evaluation Domain</span>
-            <span className="spec-val">Held-Out Spatial Split</span>
-          </div>
-          <div className="spec-item">
-            <span className="spec-label">Target Metric</span>
-            <span className="spec-val">Overall RMSE (°C)</span>
-          </div>
-        </div>
-      </div>
+
 
       {/* Mandatory Disclaimer Banner */}
       <div
