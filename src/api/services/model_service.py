@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+import threading
 from typing import Any
 
-from src.config import settings
+from src.config import WORKSPACE_ROOT, settings
 from src.inference import OceanInferenceEngine
 
 logger = logging.getLogger("oceanembed.model_service")
@@ -30,38 +31,54 @@ class ModelService:
     """Singleton service managing OceanEmbed V2 model lifecycle and inference."""
 
     _instance: ModelService | None = None
+    _class_lock = threading.Lock()
     _engine: OceanInferenceEngine | None = None
     _load_error: str | None = None
 
     def __init__(self, checkpoint_path: str | Path | None = None) -> None:
         self.checkpoint_path = Path(checkpoint_path) if checkpoint_path else settings.checkpoint_path
+        self._lock = threading.Lock()
 
     @classmethod
     def get_instance(cls, checkpoint_path: str | Path | None = None) -> ModelService:
-        """Return singleton instance of the ModelService."""
+        """Return singleton instance of the ModelService with thread-safe locking."""
         if cls._instance is None:
-            cls._instance = cls(checkpoint_path)
+            with cls._class_lock:
+                if cls._instance is None:
+                    cls._instance = cls(checkpoint_path)
         return cls._instance
 
+    def _sanitize_path(self, p: Path) -> str:
+        """Return relative path to workspace root to avoid leaking host filesystem layout."""
+        try:
+            return str(p.relative_to(WORKSPACE_ROOT)).replace("\\", "/")
+        except Exception:
+            return p.name
+
     def load_model(self) -> None:
-        """Load and cache the trained OceanInferenceEngine into memory."""
+        """Load and cache the trained OceanInferenceEngine into memory with thread safety."""
         if self._engine is not None:
             return
 
-        if not self.checkpoint_path.exists():
-            self._load_error = f"Checkpoint file not found at: {self.checkpoint_path}"
-            logger.warning("Model checkpoint not found: %s", self.checkpoint_path)
-            return
+        with self._lock:
+            if self._engine is not None:
+                return
 
-        try:
-            logger.info("Loading OceanEmbed model checkpoint from: %s", self.checkpoint_path)
-            self._engine = OceanInferenceEngine(self.checkpoint_path)
-            self._load_error = None
-            logger.info("OceanEmbed V2 model loaded successfully into memory.")
-        except Exception as ex:
-            self._load_error = str(ex)
-            self._engine = None
-            logger.error("Failed to load OceanEmbed checkpoint: %s", ex, exc_info=True)
+            if not self.checkpoint_path.exists():
+                safe_name = self._sanitize_path(self.checkpoint_path)
+                self._load_error = f"Checkpoint file not found at: {safe_name}"
+                logger.warning("Model checkpoint not found: %s", self.checkpoint_path)
+                return
+
+            try:
+                logger.info("Loading OceanEmbed model checkpoint from: %s", self.checkpoint_path)
+                self._engine = OceanInferenceEngine(self.checkpoint_path)
+                self._load_error = None
+                logger.info("OceanEmbed V2 model loaded successfully into memory.")
+            except Exception as ex:
+                self._load_error = "Model checkpoint failed to load."
+                self._engine = None
+                logger.error("Failed to load OceanEmbed checkpoint: %s", ex, exc_info=True)
 
     @property
     def is_available(self) -> bool:
@@ -75,8 +92,9 @@ class ModelService:
         if self._engine is None:
             self.load_model()
         if self._engine is None:
+            safe_name = self._sanitize_path(self.checkpoint_path)
             raise ModelNotAvailableError(
-                self._load_error or f"OceanEmbed model checkpoint not loaded from {self.checkpoint_path}"
+                self._load_error or f"OceanEmbed model checkpoint not found or could not be loaded from {safe_name}"
             )
         return self._engine
 
@@ -91,7 +109,7 @@ class ModelService:
 
         return {
             "version": "oceanembed_v2" if self._engine else "unknown",
-            "checkpoint_path": str(self.checkpoint_path),
+            "checkpoint_path": self._sanitize_path(self.checkpoint_path),
             "checkpoint_exists": exists,
             "checkpoint_size_mb": size_mb,
             "is_loaded": self.is_available,
@@ -118,7 +136,7 @@ class ModelService:
     ) -> dict[str, Any]:
         """Execute model inference and return formatted prediction dictionary.
 
-        Adheres strictly to Part K:
+        Adheres strictly to scientific honesty:
         - If data_mode == 'synthetic': use deterministic demo generator.
         - If data_mode == 'real': use real satellite data only if genuinely available.
           Otherwise raise RealDataNotAvailableError (which maps to HTTP 503).
@@ -127,11 +145,17 @@ class ModelService:
         engine = self.get_engine()
         if data_mode == "real":
             sat_dir = settings.satellite_data_dir
-            sat_files = (
-                list(sat_dir.glob("*.nc"))
-                + list(sat_dir.glob("**/*.nc"))
-                + list(sat_dir.glob("*.zarr"))
-            ) if sat_dir.exists() else []
+            sat_files: list[Path] = []
+            if sat_dir.exists():
+                found = set(sat_dir.glob("*.nc")) | set(sat_dir.glob("*.zarr"))
+                try:
+                    for sub in sat_dir.iterdir():
+                        if sub.is_dir():
+                            found.update(sub.glob("*.nc"))
+                            found.update(sub.glob("*.zarr"))
+                except Exception as ex:
+                    logger.warning("Error traversing satellite data subdirectory: %s", ex)
+                sat_files = sorted(list(found))[:50]
 
             if not sat_files:
                 raise RealDataNotAvailableError(
@@ -140,6 +164,7 @@ class ModelService:
                     "In adherence to SIH scientific honesty rules, real-mode inference cannot proceed without verified observations."
                 )
 
+            ds = None
             try:
                 from src.data.real_satellite_preprocessing import RealSatellitePreprocessor
                 import xarray as xr
@@ -158,13 +183,20 @@ class ModelService:
                 result["prediction_date"] = str(date_val)
                 result["data_mode"] = "real_satellite"
                 return result
+            except RealDataNotAvailableError:
+                raise
             except Exception as err:
-                logger.error("Failed to process real satellite rasters for prediction: %s", err)
-                raise RealDataNotAvailableError(
-                    f"Real satellite data processing failed: {err}"
-                )
+                logger.error("Failed to process real satellite rasters for prediction: %s", err, exc_info=True)
+                raise RealDataNotAvailableError("Real satellite data processing failed.")
+            finally:
+                if ds is not None:
+                    try:
+                        ds.close()
+                    except Exception:
+                        pass
 
         # Default synthetic mode
         result = engine.predict_from_location_date(latitude, longitude, date_val)
         result["data_mode"] = "synthetic_demo"
         return result
+

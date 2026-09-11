@@ -77,8 +77,10 @@ class CMEMSSatelliteProvider(SatelliteDataProvider):
         if not settings.satellite_data_dir.exists():
             return False
         # Check if actual satellite netcdf / zarr data files exist
-        sat_files = list(settings.satellite_data_dir.glob("*.nc")) + list(settings.satellite_data_dir.glob("*.zarr"))
-        return len(sat_files) > 0
+        has_nc = next(settings.satellite_data_dir.glob("*.nc"), None) is not None
+        has_zarr = next(settings.satellite_data_dir.glob("*.zarr"), None) is not None
+        return has_nc or has_zarr
+
 
     def get_status(self) -> dict[str, Any]:
         configured = self.is_configured()

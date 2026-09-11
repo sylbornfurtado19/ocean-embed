@@ -10,6 +10,8 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - API_ENV=demo
+      - ENABLE_DOCS=false
       - OCEAN_DATA_MODE=synthetic
       - OCEANEMBED_CHECKPOINT=checkpoints/oceanembed_v2.pt
       - ARGO_DATA_DIR=data/raw/argo
@@ -17,6 +19,9 @@ services:
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - LOG_LEVEL=INFO
+      - CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000,http://localhost:8501
+      - MAX_CONCURRENT_INFERENCE=4
+      - RATE_LIMIT_PER_MINUTE=60
     volumes:
       - ./checkpoints:/app/checkpoints:ro
       - ./data:/app/data
@@ -25,3 +30,4 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+

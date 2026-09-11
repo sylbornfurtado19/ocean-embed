@@ -22,6 +22,30 @@ from src.models.v0_baseline import OceanBaselineV0
 from src.models.v1_uncertainty import OceanBaselineV1
 
 
+def _load_safe_checkpoint(path: Path) -> dict[str, Any]:
+    """Load PyTorch checkpoint with weights_only=True when possible, allowlisting safe numpy types."""
+    if hasattr(torch.serialization, "add_safe_globals"):
+        try:
+            safe_types = []
+            # NumPy array and scalar reconstructors
+            if hasattr(np, "_core") and hasattr(np._core, "multiarray") and hasattr(np._core.multiarray, "_reconstruct"):
+                safe_types.append(np._core.multiarray._reconstruct)
+            elif hasattr(np, "core") and hasattr(np.core, "multiarray") and hasattr(np.core.multiarray, "_reconstruct"):
+                safe_types.append(np.core.multiarray._reconstruct)
+            if hasattr(np, "ndarray"):
+                safe_types.append(np.ndarray)
+            if hasattr(np, "dtype"):
+                safe_types.append(np.dtype)
+            if hasattr(np, "dtypes") and hasattr(np.dtypes, "Float32DType"):
+                safe_types.append(np.dtypes.Float32DType)
+            if safe_types:
+                torch.serialization.add_safe_globals(safe_types)
+            return torch.load(path, map_location="cpu", weights_only=True)
+        except Exception:
+            pass
+    return torch.load(path, map_location="cpu", weights_only=False)
+
+
 class OceanInferenceEngine:
     """Unified inference engine supporting V0, V1, and OceanEmbed V2."""
 
@@ -30,7 +54,7 @@ class OceanInferenceEngine:
         if not self.checkpoint_path.exists():
             raise FileNotFoundError(f"Checkpoint not found at: {self.checkpoint_path}")
 
-        checkpoint = torch.load(self.checkpoint_path, map_location="cpu", weights_only=False)
+        checkpoint = _load_safe_checkpoint(self.checkpoint_path)
         self.model_version = checkpoint.get("model_version", "v0")
         self.target_depths = checkpoint.get(
             "target_depths",

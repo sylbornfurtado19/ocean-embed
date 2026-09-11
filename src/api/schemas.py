@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import datetime
+import math
 from typing import Any, Literal
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class PredictionRequest(BaseModel):
     """Payload for subsurface ocean temperature reconstruction."""
+
+    model_config = ConfigDict(extra="forbid")
 
     latitude: float = Field(
         ...,
@@ -33,23 +36,29 @@ class PredictionRequest(BaseModel):
     @field_validator("latitude")
     @classmethod
     def validate_latitude(cls, v: float) -> float:
+        if not isinstance(v, (int, float)) or not math.isfinite(v):
+            raise ValueError("Latitude must be a finite numerical value.")
         if not (5.0 <= v <= 23.0):
             raise ValueError(f"Latitude {v:.4f}°N is outside the Bay of Bengal demo domain (5.0°N to 23.0°N).")
-        return round(v, 4)
+        return round(float(v), 4)
 
     @field_validator("longitude")
     @classmethod
     def validate_longitude(cls, v: float) -> float:
+        if not isinstance(v, (int, float)) or not math.isfinite(v):
+            raise ValueError("Longitude must be a finite numerical value.")
         if not (80.0 <= v <= 100.0):
             raise ValueError(f"Longitude {v:.4f}°E is outside the Bay of Bengal demo domain (80.0°E to 100.0°E).")
-        return round(v, 4)
+        return round(float(v), 4)
 
     @field_validator("date")
     @classmethod
     def validate_date(cls, v: str) -> str:
+        if not isinstance(v, str):
+            raise ValueError("Date must be an ISO format string YYYY-MM-DD.")
         try:
             parsed = datetime.date.fromisoformat(v.strip())
-            # Ensure within year 2023 for demo consistency
+            # Ensure within supported simulation window (2020-2026)
             if parsed.year < 2020 or parsed.year > 2026:
                 raise ValueError(f"Date {v} is outside supported simulation window (2020-2026).")
             return parsed.isoformat()
@@ -57,6 +66,7 @@ class PredictionRequest(BaseModel):
             if isinstance(ex, ValueError) and "supported simulation window" in str(ex):
                 raise ex
             raise ValueError(f"Invalid date format '{v}'. Expected ISO format YYYY-MM-DD.")
+
 
 
 class PredictionResponse(BaseModel):
@@ -152,3 +162,5 @@ class ErrorResponse(BaseModel):
     detail: str
     error_code: str
     timestamp: str
+    request_id: str | None = None
+

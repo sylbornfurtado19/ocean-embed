@@ -9,3 +9,7 @@ checkpoints/
 *.pt
 *.pth
 .ipynb_checkpoints/
+node_modules/
+dist/
+.pytest_cache/
+

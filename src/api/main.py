@@ -16,6 +16,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+
+from src.api.middleware import InMemoryRateLimiterMiddleware, RequestIdAndSecurityHeadersMiddleware
 from src.api.routes import data_router, health_router, inference_router
 from src.api.services.model_service import ModelService
 from src.config import settings
@@ -31,8 +34,7 @@ logger = logging.getLogger("oceanembed.api")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan context manager for application startup and shutdown events."""
-    logger.info("Starting OceanEmbed API (Mode: %s)...", settings.data_mode)
-    logger.info("Configured checkpoint path: %s", settings.checkpoint_path)
+    logger.info("Starting OceanEmbed API (Env: %s, Mode: %s)...", settings.api_env, settings.data_mode)
 
     # Pre-warm model in memory so first inference request is fast
     model_service = ModelService.get_instance()
@@ -55,62 +57,84 @@ app = FastAPI(
         "Smart India Hackathon 2026 (Problem Statement ID: 26066 | Team: Bug Dealers)."
     ),
     version="2.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if settings.enable_docs else None,
+    redoc_url="/redoc" if settings.enable_docs else None,
     lifespan=lifespan,
 )
 
-# CORS middleware for open/flexible integration (e.g. Streamlit or external frontends)
+# 1. TrustedHost Middleware to protect against Host header attacks
+if settings.trusted_hosts and "*" not in settings.trusted_hosts:
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
+
+# 2. CORS Middleware with environment-driven allowlisting
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=settings.cors_allowed_origins,
+    allow_credentials=True if "*" not in settings.cors_allowed_origins else False,
+    allow_methods=["GET", "POST", "OPTIONS", "HEAD"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
 )
+
+# 3. Request-level security, rate limiting, and size boundary middlewares
+app.add_middleware(InMemoryRateLimiterMiddleware)
+app.add_middleware(RequestIdAndSecurityHeadersMiddleware)
+
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Standardized handler for Pydantic input validation errors (HTTP 422)."""
+    req_id = getattr(request.state, "request_id", None)
     errors = exc.errors()
     error_msg = "; ".join([f"{e['loc'][-1]}: {e['msg']}" for e in errors]) if errors else "Validation error."
-    logger.warning("Input validation error on %s: %s", request.url.path, error_msg)
+    logger.warning("[%s] Input validation error on %s: %s", req_id, request.url.path, error_msg)
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
             "detail": error_msg,
             "error_code": "VALIDATION_ERROR",
+            "request_id": req_id,
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         },
+        headers={"X-Request-ID": req_id} if req_id else {},
     )
 
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     """Standardized handler for HTTPExceptions."""
-    logger.warning("HTTP %d error on %s: %s", exc.status_code, request.url.path, exc.detail)
+    req_id = getattr(request.state, "request_id", None)
+    logger.warning("[%s] HTTP %d error on %s: %s", req_id, exc.status_code, request.url.path, exc.detail)
+    headers = {"X-Request-ID": req_id} if req_id else {}
+    if exc.headers:
+        headers.update(exc.headers)
     return JSONResponse(
         status_code=exc.status_code,
         content={
             "detail": exc.detail,
             "error_code": f"HTTP_{exc.status_code}",
+            "request_id": req_id,
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         },
+        headers=headers,
     )
 
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Global exception handler suppressing raw Python tracebacks from API consumers."""
-    logger.error("Unhandled exception processing %s: %s", request.url.path, exc, exc_info=True)
+    """Global exception handler suppressing raw Python tracebacks and internal paths from API consumers."""
+    req_id = getattr(request.state, "request_id", None)
+    logger.error("[%s] Unhandled exception processing %s: %s", req_id, request.url.path, exc, exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "detail": "Internal server error occurred during request processing.",
             "error_code": "INTERNAL_SERVER_ERROR",
+            "request_id": req_id,
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         },
+        headers={"X-Request-ID": req_id} if req_id else {},
     )
 
 
@@ -121,7 +145,7 @@ app.include_router(data_router)
 
 
 @app.get("/", tags=["Root"])
-def root() -> dict[str, str]:
+def root() -> dict[str, Any]:
     """Root endpoint welcoming users and directing to API documentation."""
     return {
         "project": "OceanEmbed",
@@ -129,7 +153,9 @@ def root() -> dict[str, str]:
         "team": "Bug Dealers",
         "sih_id": "26066",
         "version": "2.0.0",
-        "docs": "/docs",
+        "docs": "/docs" if settings.enable_docs else None,
         "health": "/health",
         "mode": settings.data_mode,
+        "env": settings.api_env,
     }
+

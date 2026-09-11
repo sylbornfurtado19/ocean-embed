@@ -5,18 +5,20 @@ filters by Bay of Bengal spatial domain (5°N–23°N, 80°E–100°E), and prov
 honest availability reporting and normalized profile representations.
 """
 
-from __future__ import annotations
-
 import datetime
 import logging
 from pathlib import Path
+import time
 from typing import Any
 
 import numpy as np
 
-from src.config import settings
+from src.config import WORKSPACE_ROOT, settings
 
 logger = logging.getLogger("oceanembed.argo_service")
+
+MAX_ARGO_FILES = 50
+MAX_RETURNED_PROFILES = 100
 
 
 class ArgoService:
@@ -24,13 +26,53 @@ class ArgoService:
 
     def __init__(self, data_dir: str | Path | None = None) -> None:
         self.data_dir = Path(data_dir) if data_dir else settings.argo_data_dir
+        self._status_cache: dict[str, Any] | None = None
+        self._status_cache_time: float = 0.0
+        self._cache_ttl_seconds: float = 30.0
+
+    def _sanitize_path(self, p: Path) -> str:
+        """Return relative path to workspace root to avoid leaking host filesystem layout."""
+        try:
+            return str(p.relative_to(WORKSPACE_ROOT)).replace("\\", "/")
+        except Exception:
+            return p.name
 
     def discover_files(self) -> list[Path]:
-        """Find all NetCDF files in the ARGO data directory."""
+        """Find all NetCDF files in the ARGO data directory with boundary and traversal guards."""
         if not self.data_dir.exists():
             return []
-        nc_files = list(self.data_dir.glob("*.nc")) + list(self.data_dir.glob("**/*.nc")) + list(self.data_dir.glob("*.nc4"))
-        return sorted(list(set(nc_files)))
+
+        resolved_root = self.data_dir.resolve()
+        found: set[Path] = set()
+
+        try:
+            for pattern in ("*.nc", "*.nc4"):
+                for p in self.data_dir.glob(pattern):
+                    if p.is_file():
+                        try:
+                            if p.resolve().is_relative_to(resolved_root):
+                                found.add(p)
+                        except (ValueError, AttributeError):
+                            if str(p.resolve()).startswith(str(resolved_root)):
+                                found.add(p)
+
+            # Check immediate subdirectories (1 level deep)
+            for sub in self.data_dir.iterdir():
+                if sub.is_dir():
+                    try:
+                        if not sub.resolve().is_relative_to(resolved_root):
+                            continue
+                    except (ValueError, AttributeError):
+                        if not str(sub.resolve()).startswith(str(resolved_root)):
+                            continue
+                    for pattern in ("*.nc", "*.nc4"):
+                        for p in sub.glob(pattern):
+                            if p.is_file():
+                                found.add(p)
+        except Exception as err:
+            logger.warning("Error discovering ARGO NetCDF files: %s", err)
+
+        return sorted(list(found))[:MAX_ARGO_FILES]
 
     def validate_profile_file(self, file_path: Path) -> dict[str, Any]:
         """Validate a single NetCDF file for ARGO profiles adhering to Phase 6 requirements.
@@ -131,26 +173,34 @@ class ArgoService:
         return result
 
     def get_argo_status(self) -> dict[str, Any]:
-        """Return ARGO data availability status.
+        """Return ARGO data availability status with short TTL caching to prevent repeated NetCDF parsing.
 
         Adheres strictly to scientific honesty:
         - Reports available: False and files_found: 0 if no NetCDF files exist.
         - Never fabricates observation records.
         """
+        now = time.time()
+        if self._status_cache is not None and (now - self._status_cache_time) < self._cache_ttl_seconds:
+            return self._status_cache
+
         files = self.discover_files()
         files_found = len(files)
+        sanitized_dir = self._sanitize_path(self.data_dir)
 
         if files_found == 0:
-            return {
+            result = {
                 "available": False,
                 "files_found": 0,
                 "profiles_available": 0,
-                "directory": str(self.data_dir),
+                "directory": sanitized_dir,
                 "message": "No real ARGO NetCDF profiles found in data/raw/argo. In-situ verification is disabled.",
                 "geographic_coverage": None,
                 "depth_coverage": None,
                 "temporal_coverage": None,
             }
+            self._status_cache = result
+            self._status_cache_time = now
+            return result
 
         # Validate files and count valid profiles
         total_valid_profiles = 0
@@ -168,16 +218,19 @@ class ArgoService:
                         all_dates.append(p["date"])
 
         if total_valid_profiles == 0:
-            return {
+            result = {
                 "available": False,
                 "files_found": files_found,
                 "profiles_available": 0,
-                "directory": str(self.data_dir),
+                "directory": sanitized_dir,
                 "message": f"Found {files_found} ARGO file(s), but none contained valid Bay of Bengal profiles.",
                 "geographic_coverage": None,
                 "depth_coverage": None,
                 "temporal_coverage": None,
             }
+            self._status_cache = result
+            self._status_cache_time = now
+            return result
 
         geo_cov = {
             "lat_min": float(np.min(all_lats)),
@@ -194,16 +247,19 @@ class ArgoService:
             "end_date": max(all_dates) if all_dates else "unknown",
         }
 
-        return {
+        result = {
             "available": True,
             "files_found": files_found,
             "profiles_available": total_valid_profiles,
-            "directory": str(self.data_dir),
+            "directory": sanitized_dir,
             "message": f"Found {files_found} ARGO NetCDF file(s) with {total_valid_profiles} valid Bay of Bengal profile(s).",
             "geographic_coverage": geo_cov,
             "depth_coverage": depth_cov,
             "temporal_coverage": temp_cov,
         }
+        self._status_cache = result
+        self._status_cache_time = now
+        return result
 
     def get_profiles(
         self,
@@ -220,16 +276,24 @@ class ArgoService:
         if not files:
             return []
 
+        # Bound search radius to safe limits
+        effective_radius = min(max(0.1, radius_deg), settings.max_argo_query_radius_deg)
         matched_profiles: list[dict[str, Any]] = []
+
         for f in files:
+            if len(matched_profiles) >= MAX_RETURNED_PROFILES:
+                break
             val_res = self.validate_profile_file(f)
             if not val_res["valid"]:
                 continue
             for p in val_res["profiles"]:
                 if latitude is not None and longitude is not None:
                     dist = ((p["latitude"] - latitude) ** 2 + (p["longitude"] - longitude) ** 2) ** 0.5
-                    if dist > radius_deg:
+                    if dist > effective_radius:
                         continue
                 matched_profiles.append(p)
+                if len(matched_profiles) >= MAX_RETURNED_PROFILES:
+                    break
 
         return matched_profiles
+

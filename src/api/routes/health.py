@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 
 from src.api.dependencies import get_argo_service, get_model_service, get_satellite_service
 from src.api.schemas import HealthResponse, ModelStatusResponse
+from src.api.security import verify_api_key
 from src.api.services.argo_service import ArgoService
 from src.api.services.model_service import ModelService
 from src.api.services.satellite_service import SatelliteService
@@ -25,7 +26,7 @@ def get_health(
     satellite_service: SatelliteService = Depends(get_satellite_service),
     argo_service: ArgoService = Depends(get_argo_service),
 ) -> HealthResponse:
-    """Return system health and subsystem availability."""
+    """Return system health and subsystem availability (public endpoint)."""
     model_avail = model_service.is_available
     sat_status = satellite_service.get_satellite_status()
     argo_status = argo_service.get_argo_status()
@@ -57,8 +58,10 @@ def get_health(
     description="Returns metadata inspected directly from the loaded OceanEmbed V2 checkpoint and model architecture.",
 )
 def get_model_status(
+    _auth: str | None = Depends(verify_api_key),
     model_service: ModelService = Depends(get_model_service),
 ) -> ModelStatusResponse:
     """Return model status, checkpoint presence, and architectural dimensions."""
     status_dict = model_service.get_model_status()
     return ModelStatusResponse(**status_dict)
+

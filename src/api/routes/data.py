@@ -7,8 +7,10 @@ from fastapi import APIRouter, Depends, Query
 
 from src.api.dependencies import get_argo_service, get_satellite_service
 from src.api.schemas import ArgoStatusResponse, SatelliteStatusResponse
+from src.api.security import verify_api_key
 from src.api.services.argo_service import ArgoService
 from src.api.services.satellite_service import SatelliteService
+from src.config import settings
 
 router = APIRouter(prefix="/data", tags=["Data Ingestion & Observations"])
 
@@ -20,6 +22,7 @@ router = APIRouter(prefix="/data", tags=["Data Ingestion & Observations"])
     description="Returns the ingestion and verification status of real ARGO float NetCDF profiles in data/raw/argo.",
 )
 def get_argo_status(
+    _auth: str | None = Depends(verify_api_key),
     argo_service: ArgoService = Depends(get_argo_service),
 ) -> ArgoStatusResponse:
     """Return in-situ ARGO float data status."""
@@ -34,6 +37,7 @@ def get_argo_status(
     description="Returns the status of satellite surface observation providers (e.g. CMEMS vs synthetic demo).",
 )
 def get_satellite_status(
+    _auth: str | None = Depends(verify_api_key),
     satellite_service: SatelliteService = Depends(get_satellite_service),
 ) -> SatelliteStatusResponse:
     """Return satellite provider configuration and availability status."""
@@ -50,7 +54,10 @@ def get_argo_profiles(
     latitude: float | None = Query(None, ge=-90.0, le=90.0, description="Center latitude (°N)"),
     longitude: float | None = Query(None, ge=-180.0, le=180.0, description="Center longitude (°E)"),
     radius_deg: float = Query(1.0, ge=0.1, le=10.0, description="Search radius in degrees"),
+    _auth: str | None = Depends(verify_api_key),
     argo_service: ArgoService = Depends(get_argo_service),
 ) -> list[dict[str, Any]]:
     """Return in-situ ARGO float profiles matching search criteria."""
-    return argo_service.get_profiles(latitude=latitude, longitude=longitude, radius_deg=radius_deg)
+    capped_radius = min(max(0.1, radius_deg), settings.max_argo_query_radius_deg)
+    return argo_service.get_profiles(latitude=latitude, longitude=longitude, radius_deg=capped_radius)
+
