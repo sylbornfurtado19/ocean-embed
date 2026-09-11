@@ -17,25 +17,7 @@ export const SystemPage: React.FC<SystemPageProps> = ({
 }) => {
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      {/* Header */}
-      <div className="compact-hero" style={{ marginBottom: '24px' }}>
-        <div className="hero-main">
-          <h1>System Architecture & Operational Runtime</h1>
-          <p>
-            Hardware deployment, neural model specifications, FastAPI endpoint contracts, and telemetry ingestion statuses.
-          </p>
-        </div>
-        <div className="hero-specs">
-          <div className="spec-item">
-            <span className="spec-label">Backend API</span>
-            <span className="spec-val">FastAPI 2.0.0</span>
-          </div>
-          <div className="spec-item">
-            <span className="spec-label">Inference Target</span>
-            <span className="spec-val">PyTorch CPU Runtime</span>
-          </div>
-        </div>
-      </div>
+
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
         {/* Model Architecture Card */}
