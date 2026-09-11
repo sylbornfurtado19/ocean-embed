@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import type { ArgoStatusResponse, PredictionResponse } from '../types';
-import { Disclaimer } from '../components/common/Disclaimer';
 import { BayOfBengalMap } from '../components/map/BayOfBengalMap';
 import { ConfigPanel } from '../components/prediction/ConfigPanel';
 import { ProfileSummary } from '../components/profile/ProfileSummary';
@@ -41,36 +40,7 @@ export const ReconstructionPage: React.FC<ReconstructionPageProps> = ({
 
   return (
     <div>
-      {/* Compact Scientific Introduction */}
-      <div className="compact-hero">
-        <div className="hero-main">
-          <h1>OCEANEMBED — Subsurface Temperature Reconstruction</h1>
-          <p>
-            Reconstruct a 15-depth ocean temperature profile from spatiotemporal surface observations across the Bay of Bengal.
-          </p>
-        </div>
-        <div className="hero-specs">
-          <div className="spec-item">
-            <span className="spec-label">Supported Region</span>
-            <span className="spec-val">5°N–23°N | 80°E–100°E</span>
-          </div>
-          <div className="spec-item">
-            <span className="spec-label">Depth Range</span>
-            <span className="spec-val">Surface–1000 m</span>
-          </div>
-          <div className="spec-item">
-            <span className="spec-label">Vertical Levels</span>
-            <span className="spec-val">15 Depths</span>
-          </div>
-          <div className="spec-item">
-            <span className="spec-label">Neural Model</span>
-            <span className="spec-val">OceanEmbed V2</span>
-          </div>
-        </div>
-      </div>
 
-      {/* Scientific Disclaimer */}
-      <Disclaimer />
 
       {/* Error Message */}
       {error && (
