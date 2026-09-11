@@ -4,25 +4,7 @@ import { ActivityIcon, CompassIcon, LayersIcon } from '../components/common/Icon
 export const OverviewPage: React.FC = () => {
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      {/* Header */}
-      <div className="compact-hero" style={{ marginBottom: '32px' }}>
-        <div className="hero-main">
-          <h1>OCEANEMBED — Scientific Overview & Objectives</h1>
-          <p>
-            Satellite-Embedding-Based Deep Learning Framework for Reconstruction of Subsurface Ocean Temperature from Surface Satellite Observations.
-          </p>
-        </div>
-        <div className="hero-specs">
-          <div className="spec-item">
-            <span className="spec-label">SIH Problem Statement</span>
-            <span className="spec-val">26066 (Disaster Management)</span>
-          </div>
-          <div className="spec-item">
-            <span className="spec-label">Development Team</span>
-            <span className="spec-val">Bug Dealers</span>
-          </div>
-        </div>
-      </div>
+
 
       {/* Cards Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
