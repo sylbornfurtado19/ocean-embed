@@ -2,6 +2,7 @@
 
 Smart India Hackathon (SIH 2026) | Problem Statement 26066
 Team: Bug Dealers | Category: Software | Theme: Disaster Management
+Domain: Bay of Bengal (5°N–23°N, 80°E–100°E) | 15 Target Depths (0 to 1000 m)
 """
 
 from __future__ import annotations
@@ -41,47 +42,274 @@ from src.inference import OceanInferenceEngine
 
 # Page Configuration
 st.set_page_config(
-    page_title="OceanEmbed | Subsurface Reconstruction",
+    page_title="OceanEmbed | Subsurface Ocean Reconstruction",
     page_icon="🌊",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Custom Styling
+# Professional Oceanography & Disaster Management UI Design System
 st.markdown(
     """
     <style>
-    .main-header {
-        padding-bottom: 0.5rem;
-        margin-bottom: 1rem;
-        border-bottom: 1px solid #e2e8f0;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #0f172a;
     }
-    .demo-badge {
-        display: inline-block;
-        background-color: #fef3c7;
-        color: #92400e;
-        padding: 0.25rem 0.6rem;
+
+    /* Main Container Padding */
+    .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 3rem;
+        max-width: 1380px;
+    }
+
+    /* Header & Hero Section */
+    .hero-header {
+        background: linear-gradient(135deg, #0a192f 0%, #0f2b48 50%, #0c4a6e 100%);
+        border-radius: 12px;
+        padding: 1.5rem 1.75rem;
+        margin-bottom: 1.25rem;
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(10, 25, 47, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .hero-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+    .hero-title {
+        font-size: 2.1rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin: 0;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .hero-subtitle {
+        color: #94a3b8;
+        font-size: 1.0rem;
+        font-weight: 400;
+        margin: 0;
+        line-height: 1.4;
+    }
+    .badge-group {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .badge-sih {
+        background: rgba(56, 189, 248, 0.15);
+        color: #7dd3fc;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        padding: 0.3rem 0.75rem;
         border-radius: 9999px;
         font-size: 0.75rem;
         font-weight: 700;
-        letter-spacing: 0.05em;
-        border: 1px solid #fde68a;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
     }
+    .badge-mode-demo {
+        background: rgba(245, 158, 11, 0.18);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.45);
+        padding: 0.3rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+    .badge-mode-real {
+        background: rgba(16, 185, 129, 0.18);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.45);
+        padding: 0.3rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    /* Scientific Disclaimer Notice Card */
     .disclaimer-card {
         background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
         border-left: 4px solid #0284c7;
-        padding: 0.75rem 1rem;
-        border-radius: 0.375rem;
+        padding: 0.85rem 1.15rem;
+        border-radius: 8px;
         font-size: 0.85rem;
         color: #475569;
         margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
     }
+
+    /* Professional Card Containers */
+    .section-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1.25rem 1.4rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    }
+    .section-card-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* KPI Metrics Card Grid */
+    .kpi-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 9px;
+        padding: 0.85rem 1.0rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        margin-bottom: 0.5rem;
+    }
+    .kpi-label {
+        font-size: 0.70rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 0.3rem;
+    }
+    .kpi-value {
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.2;
+    }
+    .kpi-sub {
+        font-size: 0.72rem;
+        color: #64748b;
+        margin-top: 0.3rem;
+        font-weight: 500;
+    }
+
+    /* Sub-cards for surface conditions & embeddings */
+    .sub-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0.75rem 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    .sub-card-label {
+        font-size: 0.68rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.2rem;
+    }
+    .sub-card-val {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    /* Thermodynamic Equation Banner */
+    .equation-banner {
+        background: #0f172a;
+        color: #f8fafc;
+        border-radius: 8px;
+        padding: 0.85rem 1.25rem;
+        margin-bottom: 1rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.92rem;
+        border-left: 4px solid #38bdf8;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    /* In-situ ARGO Status Card */
     .argo-card {
-        background-color: #f1f5f9;
-        border: 1px solid #cbd5e1;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-top: 1rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1.1rem 1.25rem;
+        margin-top: 0.75rem;
+    }
+    .argo-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    .status-pill-unavail {
+        background: #fef3c7;
+        color: #b45309;
+        font-weight: 700;
+        font-size: 0.75rem;
+        letter-spacing: 0.04em;
+        padding: 0.25rem 0.65rem;
+        border-radius: 6px;
+        border: 1px solid #fde68a;
+    }
+    .status-pill-avail {
+        background: #dcfce7;
+        color: #15803d;
+        font-weight: 700;
+        font-size: 0.75rem;
+        letter-spacing: 0.04em;
+        padding: 0.25rem 0.65rem;
+        border-radius: 6px;
+        border: 1px solid #bbf7d0;
+    }
+
+    /* Primary Action Button Polish */
+    div.stButton > button:first-child {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: 0.03em;
+        padding: 0.65rem 1.25rem;
+        border-radius: 8px;
+        border: none;
+        box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+        transition: all 0.15s ease-in-out;
+    }
+    div.stButton > button:first-child:hover {
+        background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+        box-shadow: 0 4px 10px rgba(2, 132, 199, 0.35);
+        transform: translateY(-1px);
+    }
+
+    /* Footer Styling */
+    .footer-container {
+        border-top: 1px solid #e2e8f0;
+        padding-top: 1.25rem;
+        margin-top: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        color: #64748b;
+        font-size: 0.82rem;
     }
     </style>
     """,
@@ -106,7 +334,7 @@ def check_argo_availability() -> bool:
     argo_dir = WORKSPACE_ROOT / "data" / "raw" / "argo"
     if not argo_dir.exists():
         return False
-    nc_files = list(argo_dir.glob("*.nc"))
+    nc_files = list(argo_dir.glob("*.nc")) + list(argo_dir.glob("*.nc4")) + list(argo_dir.glob("**/*.nc"))
     return len(nc_files) > 0
 
 
@@ -130,19 +358,19 @@ def main() -> None:
     try:
         engine = load_cached_inference_engine()
     except FileNotFoundError as e:
-        st.error(f"❌ {e}")
+        st.error(f"❌ Checkpoint Error: {e}")
         st.stop()
     except Exception as e:
         st.error(f"❌ Failed to load OceanEmbed model: {e}")
         st.stop()
 
-    # Sidebar: Controls & Options
+    # Sidebar: Clean Prediction Controls Panel
     with st.sidebar:
         st.markdown("### 🎛️ Prediction Controls")
-        st.caption("Bay of Bengal Prototype (5°N–23°N, 80°E–100°E)")
+        st.caption("Bay of Bengal Prototype (5.0°N–23.0°N, 80.0°E–100.0°E)")
 
         input_lat = st.number_input(
-            "Latitude (°N)",
+            "Target Latitude (°N)",
             min_value=-90.0,
             max_value=90.0,
             value=float(st.session_state["lat"]),
@@ -151,7 +379,7 @@ def main() -> None:
             help="Target latitude within the Bay of Bengal domain (5°N to 23°N)",
         )
         input_lon = st.number_input(
-            "Longitude (°E)",
+            "Target Longitude (°E)",
             min_value=-180.0,
             max_value=180.0,
             value=float(st.session_state["lon"]),
@@ -162,13 +390,13 @@ def main() -> None:
         input_date = st.date_input(
             "Prediction Date",
             value=st.session_state["date"],
-            min_value=datetime.date(2023, 1, 1),
-            max_value=datetime.date(2023, 12, 31),
+            min_value=datetime.date(2020, 1, 1),
+            max_value=datetime.date(2026, 12, 31),
             help="Central date for the 31-day temporal sequence (day -15 to day +15)",
         )
 
         st.markdown("---")
-        st.markdown("### 📡 Data Source")
+        st.markdown("### 📡 Observation Feed")
         sat_dir = WORKSPACE_ROOT / "data" / "raw" / "satellite"
         real_sat_available = sat_dir.exists() and len(list(sat_dir.glob("*.nc")) + list(sat_dir.glob("*.zarr"))) > 0
         data_source_options = ["Synthetic Demo (Active)"]
@@ -178,7 +406,7 @@ def main() -> None:
             data_source_options.append("Real Satellite (Not Configured)")
 
         selected_data_source = st.radio(
-            "Select Input Source",
+            "Input Surface Data Mode",
             data_source_options,
             index=0,
             help="Select verified deterministic synthetic simulation or ingested real satellite rasters.",
@@ -186,49 +414,56 @@ def main() -> None:
         is_real_data_mode = (selected_data_source == "Real Satellite (CMEMS)")
 
         st.markdown("---")
-        st.markdown("### ⚙️ View Options")
-        show_uncertainty = st.checkbox("Show 90% Uncertainty Envelope", value=True)
-        show_climatology = st.checkbox("Show Climatology Decomposition", value=True)
-        show_regime = st.checkbox("Show Latent Regime Context", value=True)
-        show_surface = st.checkbox("Show Surface Inputs", value=True)
-        show_embedding = st.checkbox("Show 512-D Ocean Embedding", value=True)
-        show_argo = st.checkbox("Show ARGO Verification Status", value=True)
+        st.markdown("### ⚙️ Analytical Layers")
+        show_uncertainty = st.checkbox("90% Gaussian Uncertainty Ribbon (±1.645σ)", value=True)
+        show_climatology = st.checkbox("Climatology Residual Decomposition", value=True)
+        show_regime = st.checkbox("Latent Regime Probabilities (K = 4)", value=True)
+        show_surface = st.checkbox("Surface Boundary Inputs", value=True)
+        show_embedding = st.checkbox("512-D Ocean Embedding State", value=True)
+        show_argo = st.checkbox("In-Situ ARGO Validation Layer", value=True)
 
         st.markdown("---")
         reconstruct_clicked = st.button(
             "🌊 RECONSTRUCT PROFILE",
             type="primary",
             use_container_width=True,
-            help="Generate 31-day spatiotemporal demo patch and run OceanEmbed V2 inference",
+            help="Generate 31-day spatiotemporal sequence and execute OceanEmbed V2 forward pass",
         )
 
         st.markdown("---")
         st.markdown(
             """
-            **Model:** OceanEmbed V2  
-            **Encoder:** CNN + ConvLSTM + CBAM  
-            **Latent Bottleneck:** 512-D  
-            **Decoder:** Depth-Conditioned  
-            **Target Depths:** 15 (0 to 1000 m)  
-            **Device:** CPU  
-            """
+            <div style="font-size: 0.8rem; color: #64748b; line-height: 1.5;">
+                <b>Model:</b> OceanEmbed V2 (PyTorch CPU)<br>
+                <b>Encoder:</b> 2D CNN + ConvLSTM + CBAM<br>
+                <b>Latent Bottleneck:</b> 512 Dimensions<br>
+                <b>Decoder:</b> Depth-Conditioned Continuous MLP<br>
+                <b>Target Depths:</b> 15 Levels (0 to 1000 m)<br>
+                <b>Domain:</b> Bay of Bengal Basin
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
-    # Header with Honest Mode Badge
+    # Header / Hero Section
     badge_html = (
-        '<span class="demo-badge" style="background-color: #dbeafe; color: #1e40af; border-color: #bfdbfe;">'
-        'REAL SATELLITE INPUT — MODEL TRAINED ON SYNTHETIC DEVELOPMENT DATA</span>'
+        '<span class="badge-mode-real">● REAL SATELLITE (SYNTHETIC WEIGHTS)</span>'
         if is_real_data_mode
-        else '<span class="demo-badge">DEMO MODE — SYNTHETIC DATA</span>'
+        else '<span class="badge-mode-demo">● DEMO MODE — SYNTHETIC DATA</span>'
     )
 
     st.markdown(
         f"""
-        <div class="main-header">
-            {badge_html}
-            <h1 style="margin: 0.3rem 0 0.1rem 0; font-size: 2.2rem; color: #0f172a;">OceanEmbed</h1>
-            <p style="margin: 0; color: #64748b; font-size: 1.05rem;">
-                Satellite-Based Subsurface Ocean Temperature Reconstruction · Smart India Hackathon 2026 (Team Bug Dealers)
+        <div class="hero-header">
+            <div class="hero-title-row">
+                <h1 class="hero-title">🌊 OceanEmbed</h1>
+                <div class="badge-group">
+                    <span class="badge-sih">SIH 2026 · PS 26066</span>
+                    {badge_html}
+                </div>
+            </div>
+            <p class="hero-subtitle">
+                Satellite-Embedding Deep Learning Framework for Subsurface Ocean Thermal Structure Reconstruction
             </p>
         </div>
         """,
@@ -239,22 +474,24 @@ def main() -> None:
     st.markdown(
         """
         <div class="disclaimer-card">
-            <b>🔬 Scientific Notice:</b> Current predictions are generated from deterministic synthetic development data. 
-            They do not represent live satellite observations, GLORYS reanalysis, or ARGO measurements and must not be interpreted as real-world ocean forecasts.
+            <span style="font-size: 1.2rem;">🔬</span>
+            <div>
+                <b>Scientific Operational Notice:</b> Predictions are generated using deterministic synthetic development data to verify software architecture and model mechanics. 
+                They do not represent operational operational forecasts, GLORYS reanalysis, or live ARGO measurements.
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # Main Grid: Left Column = Map, Right Column = Instructions / Quick Status
-    col_map, col_status = st.columns([1.3, 1.0])
+    # Main Grid: Left Column = Folium Map, Right Column = Domain Guide & Quick Status
+    col_map, col_status = st.columns([1.35, 1.0])
 
     with col_map:
-        st.markdown("##### 📍 Bay of Bengal Geographic Selector")
-        st.caption("Click any location inside the highlighted box to select target coordinates:")
+        st.markdown("##### 📍 Geographic Domain Selector (Bay of Bengal)")
+        st.caption("Click any point within the highlighted rectangular domain to set reconstruction target coordinates:")
         clicked_lat, clicked_lon = render_bay_of_bengal_map(input_lat, input_lon)
         if clicked_lat is not None and clicked_lon is not None:
-            # Update coordinates if clicked point is valid
             is_valid, _ = validate_coordinates(clicked_lat, clicked_lon)
             if is_valid:
                 if round(clicked_lat, 2) != round(float(st.session_state["lat"]), 2) or round(clicked_lon, 2) != round(float(st.session_state["lon"]), 2):
@@ -263,28 +500,42 @@ def main() -> None:
                     st.rerun()
 
     with col_status:
-        st.markdown("##### 🧭 Target Parameters")
+        st.markdown("##### 🧭 Target Parameters & Domain Boundary")
         is_coord_valid, coord_err = validate_coordinates(input_lat, input_lon)
         if not is_coord_valid:
             st.error(f"⚠️ {coord_err}")
-            st.warning("Selected location is outside the current OceanEmbed demo domain. Please select coordinates within 5°N–23°N, 80°E–100°E.")
+            st.warning("Coordinates are outside the supported Bay of Bengal operational prototype (5°N–23°N, 80°E–100°E).")
         else:
-            st.success(
-                f"**Latitude:** {input_lat:.4f}°N  \n"
-                f"**Longitude:** {input_lon:.4f}°E"
-            )
-            st.info(
-                f"**Prediction Date:** {input_date.isoformat()}  \n"
-                f"**Temporal Window:** {input_date - datetime.timedelta(days=15)} to {input_date + datetime.timedelta(days=15)} (31 days)  \n"
-                f"**Spatial Patch:** 32 × 32 (~8° × 8° local neighborhood)"
-            )
             st.markdown(
-                """
-                **How to use:**
-                1. Select location via the map or sidebar inputs.
-                2. Select prediction date.
-                3. Click **RECONSTRUCT PROFILE** to execute OceanEmbed V2.
-                """
+                f"""
+                <div class="section-card" style="margin-bottom: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="font-weight: 700; font-size: 0.85rem; color: #0f172a;">COORDINATE STATUS</span>
+                        <span style="color: #16a34a; font-weight: 700; font-size: 0.78rem; background: #dcfce7; padding: 2px 8px; border-radius: 4px;">VALID DOMAIN</span>
+                    </div>
+                    <div style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">{input_lat:.4f}°N, {input_lon:.4f}°E</div>
+                    <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem;">Bay of Bengal Basin · 0.25° Resolution Grid</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            start_t = input_date - datetime.timedelta(days=15)
+            end_t = input_date + datetime.timedelta(days=15)
+            st.markdown(
+                f"""
+                <div class="sub-card" style="margin-bottom: 0.75rem;">
+                    <div class="sub-card-label">Temporal Window (31 Days)</div>
+                    <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">{input_date.isoformat()} (Center: Day 0)</div>
+                    <div style="font-size: 0.75rem; color: #64748b;">Sequence: {start_t.isoformat()} to {end_t.isoformat()}</div>
+                </div>
+                <div class="sub-card" style="margin-bottom: 0;">
+                    <div class="sub-card-label">Spatial Neighborhood</div>
+                    <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">32 × 32 Patch (~8° × 8°)</div>
+                    <div style="font-size: 0.75rem; color: #64748b;">5 Surface Channels: SST · SSS · SLA · Wind-U · Wind-V</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
 
     # Inference Execution
@@ -296,12 +547,12 @@ def main() -> None:
             st.session_state["lon"] = input_lon
             st.session_state["date"] = input_date
 
-            with st.spinner("Reconstructing subsurface temperature profile via OceanEmbed V2..."):
+            with st.spinner("Executing OceanEmbed V2 forward pass..."):
                 try:
                     res = engine.predict_from_location_date(input_lat, input_lon, input_date)
                     st.session_state["prediction_result"] = res
                 except Exception as ex:
-                    st.error(f"Inference failed: {ex}")
+                    st.error(f"Inference forward pass failed: {ex}")
                     st.session_state["prediction_result"] = None
 
     result = st.session_state.get("prediction_result", None)
@@ -309,11 +560,11 @@ def main() -> None:
     # Results Display
     if result is not None:
         st.markdown("---")
-        st.markdown("### 📊 Reconstruction Summary")
+        st.markdown("### 📊 Reconstruction Summary Metrics")
         render_summary_metrics(result)
 
         st.markdown("---")
-        st.markdown("### 🌡️ Subsurface Ocean Temperature Profile")
+        st.markdown("### 🌡️ Vertical Ocean Temperature Profile")
 
         # Vertical Profile Chart
         fig_profile = render_temperature_profile_chart(
@@ -326,10 +577,15 @@ def main() -> None:
 
         # Climatology Decomposition (Expander or Inline)
         if show_climatology and "climatology_prior" in result and "anomaly" in result:
-            with st.expander("🔍 View Climatology Residual Decomposition", expanded=False):
-                st.caption(
-                    "OceanEmbed V2 learns to predict a subsurface temperature anomaly ΔT(z), which is recombined "
-                    "with the synthetic demo climatology prior: Final T(z) = Climatology Prior(z) + ΔT(z)."
+            with st.expander("🔍 Climatology Residual Decomposition Analysis", expanded=False):
+                st.markdown(
+                    """
+                    <div class="equation-banner">
+                        <span>Physical Formulation: <b>T(z) = T<sub>climatology</sub>(z) + ΔT(z)</b></span>
+                        <span style="font-size: 0.8rem; color: #7dd3fc;">Prior-Guided Deep Ocean Stabilization</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
                 )
                 fig_clim = render_climatology_decomposition_chart(
                     depths=result["depths"],
@@ -344,22 +600,20 @@ def main() -> None:
 
         with col_regime:
             if show_regime and "regime_probs" in result:
-                st.markdown("##### 🌐 Latent Regime Context")
+                st.markdown("##### 🌐 Hydrographic Regime Context")
                 fig_regime = render_regime_chart(result["regime_probs"])
                 st.plotly_chart(fig_regime, use_container_width=True)
-                st.caption("Soft latent regime representation learned by the model (differentiable probability distribution across K=4 regimes).")
 
         with col_surf:
             if show_surface and "surface_inputs" in result:
-                st.markdown("##### 🌊 Synthetic Demo Surface Conditions")
-                st.caption("Representative surface boundary conditions at the center coordinate and prediction date:")
+                st.markdown("##### 🌊 Surface Boundary Conditions (Center Date)")
                 render_surface_inputs(result["surface_inputs"])
 
         # Profile Data Table & CSV Download
-        with st.expander("📋 View Profile Data Table & CSV Export", expanded=True):
+        with st.expander("📋 Profile Data Table & Export (15 Standard Depths)", expanded=True):
             st.caption(
-                "Tabular representation of the 15-depth reconstructed profile showing mean temperature, "
-                "predictive uncertainty (σ), and 90% Gaussian predictive bounds."
+                "Discrete 15-depth vertical temperature reconstruction with predictive standard deviation (σ) "
+                "and 90% Gaussian predictive confidence intervals (±1.645σ)."
             )
             profile_df = create_profile_dataframe(
                 depths=result["depths"],
@@ -376,7 +630,7 @@ def main() -> None:
         # 512-D Ocean Embedding Inspection
         if show_embedding and "embedding" in result:
             st.markdown("---")
-            st.markdown("### 🧬 Ocean Embedding (512-D Latent State)")
+            st.markdown("### 🧬 512-D Ocean Embedding (Latent State Representation)")
             render_embedding_panel(result["embedding"])
 
         # ARGO Validation Status
@@ -388,14 +642,15 @@ def main() -> None:
                 st.markdown(
                     """
                     <div class="argo-card">
-                        <span style="font-weight: 700; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
-                            STATUS: NOT AVAILABLE
-                        </span>
-                        <p style="margin-top: 0.5rem; margin-bottom: 0.2rem; color: #334155; font-size: 0.9rem;">
-                            <b>ARGO comparison unavailable</b> — no real ARGO NetCDF profiles are currently ingested in <code>data/raw/argo</code>.
+                        <div class="argo-header">
+                            <span style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">Independent In-Situ Validation Status</span>
+                            <span class="status-pill-unavail">STATUS: NOT AVAILABLE</span>
+                        </div>
+                        <p style="margin-top: 0.35rem; margin-bottom: 0.25rem; color: #334155; font-size: 0.88rem;">
+                            <b>ARGO float comparison unavailable</b> — No authentic NetCDF float observation profiles are ingested in <code>data/raw/argo</code>.
                         </p>
-                        <p style="margin: 0; color: #64748b; font-size: 0.8rem;">
-                            The evaluation framework gracefully skips in-situ verification to avoid fabricating unverified observations. In-situ ARGO float profiles will be integrated in subsequent operational phases.
+                        <p style="margin: 0; color: #64748b; font-size: 0.80rem;">
+                            To maintain absolute scientific honesty, the evaluation framework gracefully skips in-situ verification without fabricating simulated float data. Real ARGO NetCDF files can be downloaded using <code>python scripts/download_argo.py</code>.
                         </p>
                     </div>
                     """,
@@ -405,38 +660,44 @@ def main() -> None:
                 from src.api.services.argo_service import ArgoService
                 argo_srv = ArgoService()
                 argo_status = argo_srv.get_argo_status()
-                st.success(f"✅ In-situ ARGO observations detected ({argo_status['profiles_available']} valid profiles in Bay of Bengal domain).")
+                st.markdown(
+                    f"""
+                    <div class="argo-card">
+                        <div class="argo-header">
+                            <span style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">Independent In-Situ Validation Status</span>
+                            <span class="status-pill-avail">STATUS: ACTIVE ({argo_status['profiles_available']} PROFILES)</span>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
                 nearby = argo_srv.get_profiles(result["latitude"], result["longitude"], radius_deg=2.5)
                 if nearby:
                     nearest = nearby[0]
                     st.info(
-                        f"📍 **Nearest ARGO Profile:** `{nearest['profile_id']}`  \n"
-                        f"**Coordinates:** {nearest['latitude']}°N, {nearest['longitude']}°E  \n"
-                        f"**Observed Depth Range:** {nearest['depth_min']} m to {nearest['depth_max']} m ({nearest['num_levels']} levels)"
+                        f"📍 **Nearest Float Profile:** `{nearest['profile_id']}` ({nearest['latitude']}°N, {nearest['longitude']}°E) · "
+                        f"Depth Range: {nearest['depth_min']} m to {nearest['depth_max']} m ({nearest['num_levels']} levels)"
                     )
                 else:
                     st.caption("No ARGO float profiles located within 2.5° radius of selected target coordinate.")
 
     else:
-        # Prompt user to click Reconstruct Profile
-        st.info("👈 Select your desired coordinates and date in the sidebar or map, then click **RECONSTRUCT PROFILE** to run the OceanEmbed V2 model.")
+        st.info("👈 Select your desired coordinates and prediction date in the sidebar or map, then click **RECONSTRUCT PROFILE** to run the OceanEmbed V2 model.")
 
     # Technical Specifications Footer
-    st.markdown("---")
-    with st.expander("ℹ️ About the Model Architecture", expanded=False):
-        st.markdown(
-            """
-            **OceanEmbed V2 Architecture Specification**:
-            - **Input Representation:** 31-day temporal sequence × 5 surface channels (SST, SSS, SLA, Wind-U, Wind-V) × 32×32 spatial patch (~0.25° grid).
-            - **Encoder:** 2D CNN feature extractor + Spatiotemporal ConvLSTM with CBAM (Convolutional Block Attention Module: Channel & Spatial Attention).
-            - **Bottleneck:** 512-dimensional continuous latent Ocean Embedding.
-            - **Regime Context:** K = 4 soft latent regime probability distribution.
-            - **Climatology Integration:** Residual formulation: $T(z) = \\text{Climatology Prior}(z) + \\Delta T(z)$.
-            - **Decoder:** Depth-Conditioned continuous MLP decoding 15 coupled depths simultaneously.
-            - **Uncertainty Formulation:** Gaussian negative log-likelihood predictive variance $\\sigma^2(z)$, yielding a 90% Gaussian predictive interval ($\\pm 1.645\\sigma$).
-            - **Official Depths (m):** 0, 5, 10, 20, 30, 50, 75, 100, 125, 150, 200, 300, 500, 700, 1000.
-            """
-        )
+    st.markdown(
+        """
+        <div class="footer-container">
+            <div>
+                <b>OceanEmbed</b> · Smart India Hackathon 2026 (Problem Statement 26066) · Team Bug Dealers
+            </div>
+            <div>
+                Architecture: ConvLSTM + CBAM + 512-D Latent Bottleneck + Depth-Conditioned Decoder
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 if __name__ == "__main__":

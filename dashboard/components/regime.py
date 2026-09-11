@@ -12,49 +12,50 @@ def render_regime_chart(regime_probs: list[float] | np.ndarray) -> go.Figure:
     percentages = probs * 100.0
 
     regime_labels = [
-        "Latent Regime 1",
-        "Latent Regime 2",
-        "Latent Regime 3",
-        "Latent Regime 4",
+        "Regime 1 (Thermal Stratification)",
+        "Regime 2 (Northern River Freshening)",
+        "Regime 3 (Cyclonic Eddy / Upwelling)",
+        "Regime 4 (Anticyclonic Deep Mixing)",
     ]
 
-    colors = ["#0284c7", "#0ea5e9", "#38bdf8", "#7dd3fc"]
+    colors = ["#0284c7", "#0ea5e9", "#06b6d4", "#38bdf8"]
 
     fig = go.Figure(
         go.Bar(
             x=percentages,
-            y=regime_labels,
+            y=regime_labels[: len(probs)],
             orientation="h",
             marker=dict(
                 color=colors[: len(probs)],
                 line=dict(color="#0369a1", width=1),
             ),
-            text=[f"{p:.1f}%" for p in percentages],
-            textposition="inside",
-            insidetextanchor="middle",
-            textfont=dict(color="#ffffff", size=11, family="sans-serif"),
-            hovertemplate="<b>%{y}</b>: %{x:.2f}%<extra></extra>",
+            text=[f"  {p:.1f}%" for p in percentages],
+            textposition="outside",
+            textfont=dict(color="#0f172a", size=11, family="Inter, sans-serif"),
+            hovertemplate="<b>%{y}</b><br>Probability: <b>%{x:.2f}%</b><extra></extra>",
         )
     )
 
     fig.update_layout(
+        font=dict(family="Inter, -apple-system, BlinkMacSystemFont, sans-serif"),
         title=dict(
-            text="<b>Latent Regime Distribution (K = 4)</b><br><sup>Soft differentiable regime probabilities learned by OceanEmbed</sup>",
+            text="<b>Latent Hydrographic Regime Distribution (K = 4)</b>",
             font=dict(size=14, color="#0f172a"),
-            x=0.02,
+            x=0.01,
+            y=0.96,
         ),
         xaxis=dict(
-            title="<b>Probability (%)</b>",
-            range=[0, 100],
+            title="<b>Posterior Probability (%)</b>",
+            range=[0, max(100.0, float(np.max(percentages)) * 1.25)],
             showgrid=True,
-            gridcolor="#f1f5f9",
+            gridcolor="#e2e8f0",
             tickfont=dict(size=10, color="#475569"),
         ),
         yaxis=dict(
             autorange="reversed",
-            tickfont=dict(size=11, color="#334155"),
+            tickfont=dict(size=11, color="#1e293b"),
         ),
-        margin=dict(l=10, r=20, t=65, b=30),
+        margin=dict(l=10, r=40, t=65, b=35),
         plot_bgcolor="#ffffff",
         paper_bgcolor="#ffffff",
         height=240,

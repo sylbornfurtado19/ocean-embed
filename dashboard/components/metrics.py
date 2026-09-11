@@ -22,48 +22,82 @@ def render_summary_metrics(
     mean_sigma = float(np.mean(sigmas))
     inf_time = float(result.get("inference_time_ms", 0.0))
     pred_date = str(result.get("prediction_date", "N/A"))
+    lat = float(result["latitude"])
+    lon = float(result["longitude"])
 
+    # Modern 6-column KPI grid
     col1, col2, col3, col4, col5, col6 = st.columns(6)
 
     with col1:
-        st.metric(
-            label="Selected Location",
-            value=f"{result['latitude']:.2f}°N",
-            delta=f"{result['longitude']:.2f}°E",
-            delta_color="off",
-            help=f"Target coordinates: Latitude {result['latitude']:.4f}°N, Longitude {result['longitude']:.4f}°E",
+        st.markdown(
+            f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Target Location</div>
+                <div class="kpi-value">{lat:.2f}°N</div>
+                <div class="kpi-sub">{lon:.2f}°E · Bay of Bengal</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
+
     with col2:
-        st.metric(
-            label="Prediction Date",
-            value=pred_date,
-            help="Central prediction date (day 0 of the 31-day temporal sequence)",
+        st.markdown(
+            f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Prediction Date</div>
+                <div class="kpi-value" style="font-size: 1.15rem;">{pred_date}</div>
+                <div class="kpi-sub">31-Day Sequence Center</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
+
     with col3:
-        st.metric(
-            label="Surface Temp (0 m)",
-            value=f"{surf_temp:.2f} °C",
-            delta=f"1000m: {deep_temp:.2f} °C",
-            delta_color="off",
-            help="Estimated temperature at the sea surface (0 m) and sea bottom (1000 m)",
+        st.markdown(
+            f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Surface Temp (0 m)</div>
+                <div class="kpi-value">{surf_temp:.2f} <span style="font-size: 0.9rem; font-weight: 500;">°C</span></div>
+                <div class="kpi-sub">1000m: {deep_temp:.2f} °C</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
+
     with col4:
-        st.metric(
-            label="Mean Uncertainty (σ)",
-            value=f"±{mean_sigma:.2f} °C",
-            help="Average predictive standard deviation across all 15 depth levels",
+        st.markdown(
+            f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Mean Uncertainty</div>
+                <div class="kpi-value">±{mean_sigma:.2f} <span style="font-size: 0.9rem; font-weight: 500;">°C</span></div>
+                <div class="kpi-sub">90% Band: ±1.645σ</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
+
     with col5:
-        st.metric(
-            label="Validation RMSE (Synth)",
-            value=f"{benchmark_val_rmse:.2f} °C",
-            help="Benchmark root mean squared error on held-out synthetic validation set (not a live measurement error)",
+        st.markdown(
+            f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Val RMSE (Synth)</div>
+                <div class="kpi-value">{benchmark_val_rmse:.2f} <span style="font-size: 0.9rem; font-weight: 500;">°C</span></div>
+                <div class="kpi-sub">Held-out Spatial Split</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
+
     with col6:
-        st.metric(
-            label="Inference Latency",
-            value=f"{inf_time:.1f} ms",
-            help="Measured PyTorch CPU model forward pass execution time",
+        st.markdown(
+            f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Inference Latency</div>
+                <div class="kpi-value" style="color: #0284c7;">{inf_time:.1f} <span style="font-size: 0.9rem; font-weight: 500;">ms</span></div>
+                <div class="kpi-sub">PyTorch CPU Execution</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
 
@@ -72,29 +106,54 @@ def render_surface_inputs(surface_inputs: dict[str, float]) -> None:
     col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
-        st.metric(
-            label="SST (Sea Surface Temp)",
-            value=f"{surface_inputs.get('sst', 0.0):.2f} °C",
+        st.markdown(
+            f"""
+            <div class="sub-card">
+                <div class="sub-card-label">SST · Sea Surface Temp</div>
+                <div class="sub-card-val">{surface_inputs.get('sst', 0.0):.2f} °C</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
     with col2:
-        st.metric(
-            label="SSS (Sea Surface Salinity)",
-            value=f"{surface_inputs.get('sss', 0.0):.2f} PSU",
+        st.markdown(
+            f"""
+            <div class="sub-card">
+                <div class="sub-card-label">SSS · Sea Surface Salinity</div>
+                <div class="sub-card-val">{surface_inputs.get('sss', 0.0):.2f} PSU</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
     with col3:
-        st.metric(
-            label="SLA (Sea Level Anomaly)",
-            value=f"{surface_inputs.get('sla', 0.0):+.3f} m",
+        st.markdown(
+            f"""
+            <div class="sub-card">
+                <div class="sub-card-label">SLA · Sea Level Anomaly</div>
+                <div class="sub-card-val">{surface_inputs.get('sla', 0.0):+.3f} m</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
     with col4:
-        st.metric(
-            label="Zonal Wind (U)",
-            value=f"{surface_inputs.get('wind_u', 0.0):.2f} m/s",
+        st.markdown(
+            f"""
+            <div class="sub-card">
+                <div class="sub-card-label">Wind-U · Zonal Component</div>
+                <div class="sub-card-val">{surface_inputs.get('wind_u', 0.0):.2f} m/s</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
     with col5:
-        st.metric(
-            label="Meridional Wind (V)",
-            value=f"{surface_inputs.get('wind_v', 0.0):.2f} m/s",
+        st.markdown(
+            f"""
+            <div class="sub-card">
+                <div class="sub-card-label">Wind-V · Meridional</div>
+                <div class="sub-card-val">{surface_inputs.get('wind_v', 0.0):.2f} m/s</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
 
@@ -107,19 +166,50 @@ def render_embedding_panel(embedding: np.ndarray) -> None:
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.metric("Embedding Dimensionality", f"{len(emb_arr)}-D")
-    with c2:
-        st.metric("L2 Norm", f"{norm:.3f}")
-    with c3:
-        st.metric("Mean Activation", f"{mean_val:.4f}")
-    with c4:
-        st.metric("Std Activation", f"{std_val:.4f}")
-
-    with st.expander("🔍 View 512-D Ocean Embedding Vector", expanded=False):
-        st.caption(
-            "Learned compact latent ocean-state representation output by the ConvLSTM + CBAM attention encoder. "
-            "Downstream decoder and regime context head decode this vector into 15 depth temperatures."
+        st.markdown(
+            f"""
+            <div class="sub-card">
+                <div class="sub-card-label">Embedding Dimensions</div>
+                <div class="sub-card-val">{len(emb_arr)}-D</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-        # Display as a scrollable array representation
-        formatted_vec = ", ".join([f"{v:.4f}" for v in emb_arr])
-        st.code(f"[{formatted_vec}]", language="text")
+    with c2:
+        st.markdown(
+            f"""
+            <div class="sub-card">
+                <div class="sub-card-label">L2 Vector Norm</div>
+                <div class="sub-card-val">{norm:.3f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with c3:
+        st.markdown(
+            f"""
+            <div class="sub-card">
+                <div class="sub-card-label">Mean Activation</div>
+                <div class="sub-card-val">{mean_val:+.4f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with c4:
+        st.markdown(
+            f"""
+            <div class="sub-card">
+                <div class="sub-card-label">Std Activation</div>
+                <div class="sub-card-val">{std_val:.4f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with st.expander("🔍 Inspect 512-D Ocean Embedding Latent Vector", expanded=False):
+        st.caption(
+            "Continuous latent state representation generated by the ConvLSTM + CBAM attention encoder. "
+            "Encapsulates 3D thermodynamic state, mixing dynamics, and thermocline structure in a 512-D bottleneck."
+        )
+        formatted_vec = ", ".join([f"{v:+.4f}" for v in emb_arr])
+        st.code(f"// OceanEmbed V2 Latent Bottleneck Vector (512-D)\n[{formatted_vec}]", language="text")
