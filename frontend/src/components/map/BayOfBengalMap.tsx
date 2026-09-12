@@ -96,6 +96,7 @@ export const BayOfBengalMap: React.FC<BayOfBengalMapProps> = ({
       minZoom: 4,
       maxZoom: 10,
       zoomControl: false,
+      scrollWheelZoom: false,
     });
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -187,7 +188,17 @@ export const BayOfBengalMap: React.FC<BayOfBengalMapProps> = ({
   }, [latitude, longitude]);
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+    <div
+      className="card"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        position: 'relative',
+        overflow: 'hidden',
+        isolation: 'isolate',
+      }}
+    >
       <div className="card-header">
         <div>
           <div className="card-title">
@@ -235,7 +246,7 @@ export const BayOfBengalMap: React.FC<BayOfBengalMapProps> = ({
         </div>
       </div>
 
-      <div style={{ flex: 1, minHeight: '400px', position: 'relative' }}>
+      <div style={{ flex: 1, minHeight: '400px', position: 'relative', overflow: 'hidden', borderRadius: '0 0 var(--radius-md) var(--radius-md)' }}>
         <div ref={mapContainerRef} style={{ width: '100%', height: '100%', minHeight: '400px' }} />
 
         {/* Dynamic Glassmorphic Floating Coordinate Badge Overlay */}
