@@ -5,6 +5,7 @@ import { TopNav, type NavPage } from './components/layout/TopNav';
 import { StatusStrip } from './components/layout/StatusStrip';
 import { Footer } from './components/layout/Footer';
 import { ReconstructionPage } from './pages/ReconstructionPage';
+import { InsightsPage } from './pages/InsightsPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { ValidationPage } from './pages/ValidationPage';
 import { SystemPage } from './pages/SystemPage';
@@ -137,6 +138,13 @@ export const App: React.FC = () => {
             loading={loading}
             error={error}
             onReconstruct={handleReconstruct}
+          />
+        )}
+
+        {currentPage === 'insights' && (
+          <InsightsPage
+            prediction={prediction}
+            onNavigateReconstruction={() => setCurrentPage('reconstruction')}
           />
         )}
 

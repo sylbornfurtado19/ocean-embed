@@ -1,7 +1,7 @@
 import React from 'react';
 import { CompassIcon } from '../common/Icons';
 
-export type NavPage = 'reconstruction' | 'overview' | 'validation' | 'system';
+export type NavPage = 'reconstruction' | 'insights' | 'overview' | 'validation' | 'system';
 
 interface TopNavProps {
   currentPage: NavPage;
@@ -13,13 +13,25 @@ export const TopNav: React.FC<TopNavProps> = ({ currentPage, onPageChange, apiCo
   return (
     <header className="top-nav">
       <div className="nav-brand-group">
-        <div className="nav-brand-title">
+        <button
+          type="button"
+          className="nav-brand-title-btn"
+          onClick={() => onPageChange('reconstruction')}
+          title="Return to Reconstruction Workspace"
+        >
           <CompassIcon size={22} style={{ color: '#38bdf8' }} />
           <span>OCEANEMBED</span>
-        </div>
+        </button>
         <span className="nav-brand-tag">SIH 2026</span>
         <div className="nav-brand-divider" />
-        <span className="nav-brand-subtitle">Ocean Insights</span>
+        <button
+          type="button"
+          className={`nav-brand-subtitle-btn ${currentPage === 'insights' ? 'active' : ''}`}
+          onClick={() => onPageChange('insights')}
+          title="Open Ocean Insights & Analytics"
+        >
+          Ocean Insights
+        </button>
       </div>
 
       <nav className="nav-links">
@@ -29,6 +41,13 @@ export const TopNav: React.FC<TopNavProps> = ({ currentPage, onPageChange, apiCo
           onClick={() => onPageChange('reconstruction')}
         >
           Reconstruction
+        </button>
+        <button
+          type="button"
+          className={`nav-link ${currentPage === 'insights' ? 'active' : ''}`}
+          onClick={() => onPageChange('insights')}
+        >
+          Ocean Insights
         </button>
         <button
           type="button"
