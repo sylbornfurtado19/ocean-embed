@@ -42,7 +42,8 @@ def render_bay_of_bengal_map(
         zoom_start=5,
         min_zoom=4,
         max_zoom=9,
-        tiles="CartoDB positron",
+        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+        attr="Esri World Dark Gray",
         control_scale=True,
     )
 

@@ -19,11 +19,12 @@ const DOMAIN_BOUNDS = {
 
 export type MapTileMode = 'dark' | 'satellite' | 'ocean';
 
-const TILE_LAYERS: Record<MapTileMode, { url: string; attribution: string; name: string }> = {
+const TILE_LAYERS: Record<MapTileMode, { url: string; referenceUrl?: string; attribution: string; name: string }> = {
   dark: {
     name: 'Dark Ocean',
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    referenceUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
   },
   satellite: {
     name: 'Satellite',
@@ -33,8 +34,26 @@ const TILE_LAYERS: Record<MapTileMode, { url: string; attribution: string; name:
   ocean: {
     name: 'Ocean Topo',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
+    referenceUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}',
     attribution: 'Tiles &copy; Esri &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri',
   },
+};
+
+const createLayerForMode = (mode: MapTileMode): L.Layer => {
+  const config = TILE_LAYERS[mode];
+  const baseLayer = L.tileLayer(config.url, {
+    attribution: config.attribution,
+    maxZoom: 16,
+  });
+
+  if (config.referenceUrl) {
+    const refLayer = L.tileLayer(config.referenceUrl, {
+      maxZoom: 16,
+    });
+    return L.layerGroup([baseLayer, refLayer]);
+  }
+
+  return baseLayer;
 };
 
 // Glowing pulse marker icon with crosshairs using HTML divIcon
@@ -62,7 +81,7 @@ export const BayOfBengalMap: React.FC<BayOfBengalMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const tileLayerRef = useRef<L.Layer | null>(null);
 
   const [tileMode, setTileMode] = useState<MapTileMode>('dark');
 
@@ -82,12 +101,8 @@ export const BayOfBengalMap: React.FC<BayOfBengalMapProps> = ({
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     // Initial tile layer (Dark Ocean)
-    const activeConfig = TILE_LAYERS[tileMode];
-    const initialTileLayer = L.tileLayer(activeConfig.url, {
-      attribution: activeConfig.attribution,
-      maxZoom: 19,
-      subdomains: 'abcd',
-    }).addTo(map);
+    const initialTileLayer = createLayerForMode(tileMode);
+    initialTileLayer.addTo(map);
     tileLayerRef.current = initialTileLayer;
 
     // Draw Supported Domain Bounding Box with Cyan Neon Glow
@@ -159,13 +174,8 @@ export const BayOfBengalMap: React.FC<BayOfBengalMapProps> = ({
       map.removeLayer(tileLayerRef.current);
     }
 
-    const config = TILE_LAYERS[tileMode];
-    const newLayer = L.tileLayer(config.url, {
-      attribution: config.attribution,
-      maxZoom: 19,
-      subdomains: 'abcd',
-    }).addTo(map);
-
+    const newLayer = createLayerForMode(tileMode);
+    newLayer.addTo(map);
     tileLayerRef.current = newLayer;
   }, [tileMode]);
 
