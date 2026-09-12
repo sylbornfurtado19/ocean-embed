@@ -9,7 +9,7 @@ interface TopNavProps {
   apiConnected: boolean;
 }
 
-export const TopNav: React.FC<TopNavProps> = ({ currentPage, onPageChange, apiConnected }) => {
+export const TopNav: React.FC<TopNavProps> = ({ currentPage, onPageChange }) => {
   return (
     <header className="top-nav">
       <div className="nav-brand-group">
@@ -62,16 +62,6 @@ export const TopNav: React.FC<TopNavProps> = ({ currentPage, onPageChange, apiCo
           System
         </button>
       </nav>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div className="status-item">
-          <span className="status-label" style={{ color: '#94a3b8' }}>API:</span>
-          <span className="status-value" style={{ fontSize: '0.75rem' }}>
-            <span className={`status-dot ${apiConnected ? 'operational' : 'error'}`} />
-            {apiConnected ? 'Operational' : 'Disconnected'}
-          </span>
-        </div>
-      </div>
     </header>
   );
 };
