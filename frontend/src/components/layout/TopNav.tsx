@@ -23,15 +23,6 @@ export const TopNav: React.FC<TopNavProps> = ({ currentPage, onPageChange, apiCo
           <span>OCEANEMBED</span>
         </button>
         <span className="nav-brand-tag">SIH 2026</span>
-        <div className="nav-brand-divider" />
-        <button
-          type="button"
-          className={`nav-brand-subtitle-btn ${currentPage === 'insights' ? 'active' : ''}`}
-          onClick={() => onPageChange('insights')}
-          title="Open Ocean Insights & Analytics"
-        >
-          Ocean Insights
-        </button>
       </div>
 
       <nav className="nav-links">
