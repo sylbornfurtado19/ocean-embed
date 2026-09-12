@@ -90,6 +90,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--max-profiles",
+        "--limit",
+        dest="max_profiles",
         type=int,
         default=50,
         help="Maximum profiles to download to prevent oversized transfers (default: 50)",
